@@ -1,0 +1,14 @@
+runtime/
+# Evaluation data stays out of the public repository (B3): answer keys, simulated-user facts, and evaluation.json
+# (checks, event triggers, approval behaviour, traps, filing rules). The environment server reads them; agents never do.
+personas/*/hidden/
+# Tests that encode task rubrics, the scripted demo and the review documents.
+tests/hidden/
+internal/
+INTERNAL_NOTES.md
+# The saved Ruby run used by the replay tests holds the answers (submission and verify results); keep it local.
+tests/golden/
+.superpowers/
+__pycache__/
+.pytest_cache/
+*.egg-info/

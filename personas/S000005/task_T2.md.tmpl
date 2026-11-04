@@ -1,0 +1,27 @@
+# Task: gather {{name}}'s {{tax_year}} tax documents
+
+Today is {{environment_date}}. {{name}} writes to you:
+
+> Pull all my {{tax_year}} tax documents into one folder and make a checklist.
+
+Put the documents in `{{writable_folder}}/` and write the checklist there too.
+
+Everything you can see of {{name}}'s life is in this environment: the email inbox, the websites {{name}} has accounts with (the `Portals` folder shows what each site displays, including tax forms posted there), documents, the calendar and text messages.
+
+## How to work
+
+Use only the `tab` command:
+
+    tab ls [PATH]            list a folder
+    tab tree                 list every file
+    tab read PATH [--page N] read a file (PDFs come back as text)
+    tab search PATTERN       search all files, PDFs included
+    tab inbox                list the emails
+    tab open URL             open a link
+    tab ask "QUESTION"       ask {{name}} something
+    tab copy PATH DEST       copy a file (PDFs too) into {{writable_folder}}/ (a DEST ending in / keeps the name)
+    tab write PATH < FILE    save a file (only under {{writable_folder}}/)
+    tab wait --days N        let time pass (mail dated by then arrives)
+    tab status               show today's date
+
+Work only from what you find here and from {{name}}'s answers. Don't invent facts. There is nothing to submit: the folder is the result.

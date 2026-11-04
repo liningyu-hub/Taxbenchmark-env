@@ -1,0 +1,120 @@
+"""Portal actions (`tab portal`): the generic framework, tested on a synthetic site so no task's rubric appears here.
+Covers listing, field validation (choices, dates against the clock, conditional rules), once-only actions,
+cancellation, receipts written into the inbox, logging of every attempt, event triggers, and isolation."""
+import json
+
+import pytest
+
+from conftest import PERSONA, agent, needs_sources
+from tab import environment
+from tab.persona import Persona
+from tab.renderer import Renderer
+from tab.run import Run
+
+pytestmark = needs_sources
+
+SITE = "Rosebowl_Climbing_Gym"  # a real Portals/ folder; the actions below are synthetic
+PORTALS = {SITE: {
+    "name": "Test Gym",
+    "actions": {
+        "book-class": {
+            "label": "Book a class", "description": "Book a class.",
+            "fields": {"kind": {"type": "choice", "choices": ["yoga", "climbing"]},
+                       "day": {"type": "date", "min": "today", "max": "2026-03-31"},
+                       "extras": {"type": "multi", "choices": ["towel", "locker"], "optional": True},
+                       "note": {"type": "text", "optional": True},
+                       "fee": {"type": "amount", "optional": True}},
+            "rules": [{"when": {"kind": "climbing"}, "field": "day", "choices": ["2026-03-14", "2026-03-21"]},
+                      {"when": {"day": "2026-03-21"}, "field": "extras", "excludes": ["locker"],
+                       "error": "No lockers that day."}],
+            "message": "Class booked for {day}.",
+            "receipt": {"from": "Test Gym <desk@testgym.example.com>", "subject": "Class confirmed: {day}",
+                        "body": "Your {kind} class on {day} is booked. Confirmation {confirmation}."}},
+        "cancel-class": {"label": "Cancel a class", "description": "Cancel a booked class.", "cancels": "book-class",
+                         "message": "Class cancelled."},
+        "freeze": {"label": "Freeze membership", "description": "Freeze once.", "once": True,
+                   "message": "Membership frozen."}}}}
+
+
+@pytest.fixture
+def gym(home, monkeypatch):
+    monkeypatch.setattr(Persona, "portals", property(lambda self: PORTALS))
+    real = Persona.task
+
+    def task(self, task_id=None):
+        if task_id == "portaltest":
+            return {"id": "portaltest", "kind": "consumer", "start": "2026-03-10T09:00", "template": "task.md.tmpl",
+                    "events": [{"id": "after_freeze", "source": "06_Events/C1_gym/Reply_cancellation_confirmed.md",
+                                "trigger": {"type": "action", "tool": "portal", "args": f"^{SITE} freeze"}}]}
+        return real(self, task_id)
+    monkeypatch.setattr(Persona, "task", task)
+    return environment.init(PERSONA, task_id="portaltest")
+
+
+def records():
+    return Run.current().state()["portal_actions"]
+
+
+def test_portal_lists_sites_and_describes_actions(gym):
+    status, out, _ = agent("portal")
+    assert status == 0 and SITE in out and "book-class" in out
+    status, out, _ = agent("portal", SITE)
+    assert status == 0 and "[Book a class]" in out and "--kind yoga|climbing" in out and "--day" in out
+    assert "after_freeze" not in out and "events" not in out  # nothing about triggers or grading
+    assert agent("portal", "No_Such_Site")[0] == 1
+
+
+def test_an_action_validates_its_fields_against_the_clock(gym):
+    bad = [["--kind", "boxing", "--day", "2026-03-12"],      # not a choice
+           ["--kind", "yoga", "--day", "2026-03-09"],        # before today (Mar 10)
+           ["--kind", "yoga", "--day", "2026-04-02"],        # after the last date
+           ["--kind", "yoga", "--day", "March 12"],          # not a date
+           ["--kind", "yoga"],                               # a required field missing
+           ["--kind", "yoga", "--day", "2026-03-12", "--colour", "red"],  # an unknown field
+           ["--kind", "climbing", "--day", "2026-03-12"],    # a conditional rule: climbing only on two days
+           ["--kind", "yoga", "--day", "2026-03-21", "--extras", "locker"],  # a conditional exclusion
+           ["--kind", "yoga", "--day", "2026-03-12", "--fee", "-5"]]
+    for args in bad:
+        status, _, err = agent("portal", SITE, "book-class", *args)
+        assert status == 1 and err.startswith("error: "), args
+    assert records() == []
+    attempts = [a for a in Run.current().actions() if a["tool"] == "portal" and len(a["args"]) > 1]
+    assert len(attempts) == len(bad) and not any(a["ok"] for a in attempts)  # every refused attempt is logged
+
+
+def test_an_action_records_its_fields_and_writes_its_receipt(gym):
+    status, out, _ = agent("portal", SITE, "book-class", "--kind", "climbing", "--day", "2026-03-14",
+                           "--extras", "towel,locker", "--fee", "$12.50")
+    assert status == 0 and "Class booked for 2026-03-14." in out and "New email: Email/" in out
+    rec = records()[0]
+    assert rec["fields"] == {"kind": "climbing", "day": "2026-03-14", "extras": ["towel", "locker"], "fee": 12.5}
+    assert rec["at"] == "2026-03-10T09:00" and rec["confirmation"] in out
+    receipt = out.split("New email: ")[1].strip()
+    text = (gym.workspace / receipt).read_text("utf-8")
+    assert "Your climbing class on 2026-03-14 is booked." in text and rec["confirmation"] in text
+    assert Run.current().integrity()["clean"] and Renderer.leak_scan(gym.workspace) == []
+
+
+def test_once_only_actions_and_cancellation(gym):
+    assert agent("portal", SITE, "freeze")[0] == 0
+    status, _, err = agent("portal", SITE, "freeze")
+    assert status == 1 and "already" in err
+    _, out, _ = agent("portal", SITE, "book-class", "--kind", "yoga", "--day", "2026-03-12")
+    conf = records()[-1]["confirmation"]
+    assert agent("portal", SITE, "cancel-class", "--confirmation", "NOPE-1")[0] == 1
+    assert agent("portal", SITE, "cancel-class", "--confirmation", conf)[0] == 0
+    booked = [r for r in records() if r["action"] == "book-class"][0]
+    assert booked["cancelled_at"] == "2026-03-10T09:00"
+    assert agent("portal", SITE, "cancel-class", "--confirmation", conf)[0] == 1  # already cancelled
+
+
+def test_an_action_can_trigger_an_event(gym):
+    _, out, _ = agent("portal", SITE, "freeze")
+    assert "New email: Email/" in out
+    assert Run.current().state()["fired"] == ["after_freeze"]
+
+
+def test_portal_needs_no_access_outside_the_workspace(gym):
+    for site in ("..", "../hidden", "../../personas"):
+        status, _, err = agent("portal", site)
+        assert status == 1 and "Unknown site" in err

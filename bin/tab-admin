@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Operator commands. See: tab-admin help   (on Windows: python bin\\tab-admin help)"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from tab.cli import admin_main  # noqa: E402
+
+admin_main()

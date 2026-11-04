@@ -1,0 +1,29 @@
+# Task: a question about IRA withdrawals
+
+Today is {{environment_date}}. {{name}} writes to you:
+
+> Meridian says I can change my withdrawal amount. Should I?
+
+Everything you can see of {{name}}'s life is in this environment: the email inbox, the websites {{name}} has accounts with (the `Portals` folder shows what each site displays), documents, the calendar and text messages. You act for {{name}}: email you send goes out from {{name}}'s address, and what you do on a website is done in {{name}}'s account.
+
+## How to work
+
+Use only the `tab` command:
+
+    tab ls [PATH]            list a folder
+    tab tree                 list every file
+    tab read PATH            read a file
+    tab search PATTERN       search all files
+    tab inbox                list the emails
+    tab open URL             open a link
+    tab ask "QUESTION"       ask {{name}} something
+    tab request-approval "WHAT YOU WANT TO DO"   ask {{name}} to approve something
+    tab portal [SITE]        list the websites you can act on, or one site's actions
+    tab portal SITE ACTION --field VALUE ...     do something on a website
+    tab send --to ADDRESS [--cc ADDRESS] --subject TEXT [--attach PATH]... < MESSAGE
+                             send an email as {{name}}
+    tab reply "MESSAGE"      tell {{name}} something (an answer, a summary)
+    tab wait --hours N | --days N   let time pass; replies arrive while you wait
+    tab status               show today's date
+
+Work only from what you find here and from {{name}}'s answers. Don't invent facts. People take time to answer, so wait for replies. There is nothing to submit: when the matter is settled, or you can do no more, stop and say what you did.

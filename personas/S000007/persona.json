@@ -1,0 +1,379 @@
+{
+  "id": "S000007",
+  "name": "Carlos Jones",
+  "email": "carlos.jones@example.com",
+  "tax_year": 2025,
+  "returns": [
+    "federal",
+    "NY"
+  ],
+  "environment_date": "2026-03-20",
+  "source_folder": "S000007_Carlos_Jones",
+  "visible_folders": {
+    "01_Email": "Email",
+    "02_Portals": "Portals",
+    "03_Documents": "Documents",
+    "04_Calendar": "Calendar",
+    "05_Texts": "Texts"
+  },
+  "writable_folder": "Documents/Taxes/2025",
+  "tax_documents": [
+    {
+      "doc": "DOC1",
+      "source": "00_TaxBench_Source/Reference Files/DOC1_W-2.pdf",
+      "place": "Portals/Horizon_Foods_Payroll_MyADP/Pay/Tax_Statements/2025_Form_W-2.pdf",
+      "expect_text": [
+        "Horizon Foods Group",
+        "W-2"
+      ]
+    },
+    {
+      "doc": "DOC2",
+      "source": "00_TaxBench_Source/Reference Files/DOC2_W-2.pdf",
+      "place": "Portals/Military_Pay_Portal/Tax_Statements/2025_Form_W-2.pdf",
+      "expect_text": [
+        "Defense Finance and Accounting Service",
+        "W-2"
+      ]
+    },
+    {
+      "doc": "DOC3",
+      "source": "00_TaxBench_Source/Reference Files/DOC3_1099-B.pdf",
+      "place": "Portals/Eastgate_Securities/Documents/Tax_Center/2025_Form_1099-B.pdf",
+      "expect_text": [
+        "Eastgate Securities",
+        "1099-B"
+      ]
+    },
+    {
+      "doc": "DOC4",
+      "source": "00_TaxBench_Source/Reference Files/DOC4_1099-R.pdf",
+      "place": "Portals/Marlowe_Trust_Company/Documents/Tax_Forms/2025_Form_1099-R.pdf",
+      "expect_text": [
+        "Marlowe Trust Company",
+        "1099-R"
+      ]
+    },
+    {
+      "doc": "DOC5",
+      "source": "00_TaxBench_Source/Reference Files/DOC5_K-1_1065.pdf",
+      "place": "Email/attachments/2026-03-10_Your_2025_Schedule_K_1/Evergreen_Systems_2025_K-1_Carlos_Jones.pdf",
+      "available_from": "2026-03-10",
+      "expect_text": [
+        "Evergreen Systems LLC",
+        "1065"
+      ]
+    },
+    {
+      "doc": "DOC6",
+      "source": "00_TaxBench_Source/Reference Files/DOC6_1098-E.pdf",
+      "place": "Portals/Willowbend_Loan_Servicing/Documents/2025_Form_1098-E.pdf",
+      "expect_text": [
+        "Willowbend Loan Servicing",
+        "1098-E"
+      ]
+    }
+  ],
+  "expert_return": "00_TaxBench_Source/Final Return/S000007_Carlos_Jones_FedNY_2025.pdf",
+  "answer_key": "hidden/answer_key.json",
+  "simulated_user": "hidden/simulated_user.json",
+  "evaluation": "hidden/evaluation.json",
+  "accounts": {
+    "elmstead_checking": {
+      "name": "Elmstead Credit Union checking",
+      "routing": "221000999",
+      "number": "0000712260"
+    }
+  },
+  "payees": {
+    "IRS": {
+      "name": "IRS (U.S. Treasury)",
+      "requires_approval": true,
+      "return": "federal",
+      "aliases": [
+        "irs",
+        "internal revenue service",
+        "us treasury",
+        "u.s. treasury",
+        "united states treasury",
+        "irs direct pay"
+      ]
+    },
+    "NYS DTF": {
+      "name": "New York State Department of Taxation and Finance",
+      "requires_approval": true,
+      "return": "NY",
+      "aliases": [
+        "nys dtf",
+        "ny dtf",
+        "dtf",
+        "nys tax department",
+        "ny tax department",
+        "new york state department of taxation and finance",
+        "nys department of taxation and finance",
+        "new york state tax department"
+      ]
+    }
+  },
+  "filing": {
+    "federal": {
+      "name": "Federal return (Form 1040)",
+      "form": "f1040",
+      "balance_due": "37",
+      "payee": "IRS"
+    },
+    "NY": {
+      "name": "New York return (Form IT-201)",
+      "form": "it201",
+      "balance_due": "80",
+      "payee": "NYS DTF"
+    }
+  },
+  "tasks": {
+    "K1": {
+      "kind": "tax",
+      "start": "2026-03-16T09:00",
+      "template": "task_K1.md.tmpl"
+    },
+    "C5": {
+      "kind": "consumer",
+      "start": "2026-02-17T09:00",
+      "template": "task_C5.md.tmpl"
+    },
+    "K2": {
+      "kind": "tax",
+      "start": "2026-02-23T09:00",
+      "template": "task_K2.md.tmpl"
+    },
+    "K3": {
+      "kind": "advice",
+      "start": "2026-03-16T09:00",
+      "template": "task_K3.md.tmpl"
+    },
+    "C3": {
+      "kind": "consumer",
+      "start": "2026-03-02T09:00",
+      "template": "task_C3.md.tmpl"
+    },
+    "K4": {
+      "kind": "advice",
+      "start": "2026-03-02T09:00",
+      "template": "task_K4.md.tmpl"
+    }
+  },
+  "output_spec": {
+    "f1040": {
+      "title": "Form 1040",
+      "lines": {
+        "filing_status": "Filing status: single, mfj, mfs, hoh or qss",
+        "1a": "Total amount from Form(s) W-2, box 1",
+        "1z": "Add lines 1a through 1h",
+        "4a": "IRA distributions",
+        "4b": "IRA distributions, taxable amount",
+        "7a": "Capital gain or (loss)",
+        "8": "Additional income from Schedule 1, line 10",
+        "9": "Total income",
+        "10": "Adjustments to income from Schedule 1, line 26",
+        "11a": "Adjusted gross income",
+        "12e": "Standard deduction or itemized deductions",
+        "13a": "Qualified business income deduction from Form 8995 or Form 8995-A",
+        "14": "Add lines 12e, 13a, and 13b",
+        "15": "Taxable income",
+        "16": "Tax",
+        "18": "Add lines 16 and 17",
+        "19": "Child tax credit or credit for other dependents from Schedule 8812",
+        "21": "Add lines 19 and 20",
+        "22": "Subtract line 21 from line 18",
+        "23": "Other taxes, including self-employment tax, from Schedule 2, line 21",
+        "24": "Total tax",
+        "25a": "Federal income tax withheld from Form(s) W-2",
+        "25d": "Add lines 25a through 25c",
+        "33": "Total payments",
+        "37": "Amount you owe",
+        "38": "Estimated tax penalty"
+      }
+    },
+    "sch1": {
+      "title": "Schedule 1 (Form 1040)",
+      "lines": {
+        "5": "Rental real estate, royalties, partnerships, S corporations, trusts, etc. (Schedule E)",
+        "10": "Additional income: combine lines 1 through 7 and 9",
+        "12": "Certain business expenses of reservists, performing artists, and fee-basis government officials (Form 2106)",
+        "15": "Deductible part of self-employment tax",
+        "26": "Adjustments to income: add lines 11 through 23 and 25"
+      }
+    },
+    "sch2": {
+      "title": "Schedule 2 (Form 1040)",
+      "lines": {
+        "4": "Self-employment tax (Schedule SE)",
+        "21": "Total other taxes"
+      }
+    },
+    "schd": {
+      "title": "Schedule D (Form 1040)",
+      "lines": {
+        "7": "Net short-term capital gain or (loss)",
+        "15": "Net long-term capital gain or (loss)",
+        "16": "Combine lines 7 and 15"
+      }
+    },
+    "sche": {
+      "title": "Schedule E (Form 1040), Part II",
+      "lines": {
+        "32": "Total partnership and S corporation income or (loss)"
+      }
+    },
+    "schse": {
+      "title": "Schedule SE (Form 1040)",
+      "lines": {
+        "2": "Net profit or (loss) from Schedule C and Schedule K-1 (Form 1065), box 14, code A",
+        "4a": "Line 3 multiplied by 92.35% (0.9235)",
+        "10": "Social security part: the smaller of line 6 or line 9 multiplied by 12.4% (0.124)",
+        "11": "Medicare part: line 6 multiplied by 2.9% (0.029)",
+        "12": "Self-employment tax",
+        "13": "Deduction for one-half of self-employment tax"
+      }
+    },
+    "sch8812": {
+      "title": "Schedule 8812 (Form 1040)",
+      "lines": {
+        "7": "Number of other dependents multiplied by $500",
+        "14": "Child tax credit and credit for other dependents (the smaller of line 12 or line 13)"
+      }
+    },
+    "f8606": {
+      "title": "Form 8606",
+      "lines": {
+        "1": "Nondeductible contributions to traditional IRAs for 2025",
+        "3": "Add lines 1 and 2",
+        "6": "Value of all traditional, SEP and SIMPLE IRAs as of December 31, 2025",
+        "8": "Net amount converted from traditional, SEP and SIMPLE IRAs to Roth IRAs in 2025",
+        "9": "Add lines 6, 7, and 8",
+        "11": "Nontaxable portion of the amount converted to Roth IRAs",
+        "16": "Amount converted from traditional, SEP and SIMPLE IRAs to Roth IRAs in 2025 (Part II)",
+        "17": "Basis in the amount converted",
+        "18": "Taxable amount of the conversion"
+      }
+    },
+    "f8995": {
+      "title": "Form 8995",
+      "lines": {
+        "11": "Taxable income before the qualified business income deduction",
+        "15": "Qualified business income deduction"
+      }
+    },
+    "f2106": {
+      "title": "Form 2106",
+      "lines": {
+        "1": "Vehicle expense",
+        "3": "Travel expense while away from home overnight, not including meals",
+        "10": "Total employee business expenses (Schedule 1, line 12)"
+      }
+    },
+    "it201": {
+      "title": "Form IT-201 (New York State resident return)",
+      "lines": {
+        "1": "Wages, salaries, tips, etc.",
+        "7": "Capital gain or (loss)",
+        "9": "Taxable amount of IRA distributions",
+        "11": "Rental real estate, royalties, partnerships, S corporations, trusts, etc.",
+        "17": "Federal income: add lines 1 through 11 and 14 through 16",
+        "18": "Total federal adjustments to income",
+        "19": "Federal adjusted gross income",
+        "33": "New York adjusted gross income",
+        "34": "Standard deduction or itemized deduction",
+        "36": "Dependent exemptions",
+        "37": "Taxable income",
+        "39": "New York State tax on line 38 amount",
+        "61": "Total New York State, New York City, Yonkers and sales or use taxes, MCTMT, and voluntary contributions",
+        "72": "New York State tax withheld",
+        "76": "Total payments",
+        "79": "Estimated tax penalty",
+        "80": "Amount you owe"
+      }
+    }
+  },
+  "portals": {
+    "Capital_Arden_Service": {
+      "name": "Capital Arden Service",
+      "actions": {
+        "book": {
+          "label": "Book online",
+          "description": "Book a Saturday service appointment.",
+          "fields": {
+            "slot": {
+              "type": "choice",
+              "choices": [
+                "2026-03-07 08:00",
+                "2026-03-14 08:00",
+                "2026-03-21 08:00",
+                "2026-03-28 08:00"
+              ]
+            },
+            "services": {
+              "type": "multi",
+              "choices": [
+                "recall",
+                "annual service"
+              ]
+            }
+          },
+          "rules": [
+            {
+              "when": {
+                "slot": "2026-03-07 08:00"
+              },
+              "field": "services",
+              "excludes": [
+                "recall"
+              ],
+              "error": "Recall parts aren't available for that date."
+            }
+          ],
+          "message": "Appointment booked for {slot}.",
+          "receipt": {
+            "from": "Capital Arden Service <service@capitalarden.example.com>",
+            "subject": "Appointment confirmed: {slot}",
+            "body": "Your appointment on {slot} is confirmed for: {services}. Confirmation {confirmation}.\n\nCapital Arden Service"
+          }
+        },
+        "cancel": {
+          "label": "Cancel appointment",
+          "description": "Cancel a booked appointment.",
+          "cancels": "book",
+          "message": "Appointment cancelled."
+        }
+      }
+    },
+    "Eastgate_Securities": {
+      "name": "Eastgate Securities",
+      "actions": {
+        "add-basis": {
+          "label": "Add basis",
+          "description": "Enter the cost basis and acquisition date for a lot.",
+          "fields": {
+            "lot": {
+              "type": "choice",
+              "choices": [
+                "Pioneer Manufacturing Inc.",
+                "Brightwater Retail Corp.",
+                "Ironwood Media Co.",
+                "Keystone Transport Corp.",
+                "Northfield Consulting Co."
+              ]
+            },
+            "basis": {
+              "type": "amount"
+            },
+            "acquired": {
+              "type": "date",
+              "max": "today"
+            }
+          },
+          "message": "Basis saved for {lot}: {basis}, acquired {acquired}."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,376 @@
+{
+  "id": "S000005",
+  "name": "Thomas Gonzalez",
+  "email": "thomas.gonzalez@example.com",
+  "tax_year": 2025,
+  "returns": [
+    "federal",
+    "CA"
+  ],
+  "environment_date": "2026-03-20",
+  "source_folder": "S000005_Thomas_Gonzalez",
+  "visible_folders": {
+    "01_Email": "Email",
+    "02_Portals": "Portals",
+    "03_Documents": "Documents",
+    "04_Calendar": "Calendar",
+    "05_Texts": "Texts"
+  },
+  "writable_folder": "Documents/Taxes/2025",
+  "tax_documents": [
+    {
+      "doc": "DOC1",
+      "source": "00_TaxBench_Source/Reference Files/DOC1_W-2.pdf",
+      "place": "Portals/Marlowe_Design_Payroll/Pay/Tax_Statements/2025_Form_W-2.pdf",
+      "expect_text": [
+        "Marlowe Design Co.",
+        "W-2"
+      ]
+    },
+    {
+      "doc": "DOC2",
+      "source": "00_TaxBench_Source/Reference Files/DOC2_1099-INT.pdf",
+      "place": "Portals/Orchard_Securities/Documents/Tax_Center/2025_Form_1099-INT.pdf",
+      "expect_text": [
+        "Orchard Securities",
+        "1099-INT"
+      ]
+    },
+    {
+      "doc": "DOC3",
+      "source": "00_TaxBench_Source/Reference Files/DOC3_1099-DIV.pdf",
+      "place": "Portals/Beacon_Securities/Documents/Tax_Center/2025_Form_1099-DIV.pdf",
+      "expect_text": [
+        "Beacon Securities",
+        "1099-DIV"
+      ]
+    },
+    {
+      "doc": "DOC4",
+      "source": "00_TaxBench_Source/Reference Files/DOC4_1099-DIV.pdf",
+      "place": "Portals/Crescent_Investments/Documents/Tax_Center/2025_Form_1099-DIV.pdf",
+      "expect_text": [
+        "Crescent Investments",
+        "1099-DIV"
+      ]
+    },
+    {
+      "doc": "DOC5",
+      "source": "00_TaxBench_Source/Reference Files/DOC5_1099-B.pdf",
+      "place": "Portals/Northfield_Investments/Documents/Tax_Center/2025_Form_1099-B.pdf",
+      "expect_text": [
+        "Northfield Investments",
+        "1099-B"
+      ]
+    },
+    {
+      "doc": "DOC6",
+      "source": "00_TaxBench_Source/Reference Files/DOC6_1099-B.pdf",
+      "place": "Portals/Horizon_Securities/Documents/Tax_Center/2025_Form_1099-B.pdf",
+      "expect_text": [
+        "Horizon Securities",
+        "1099-B"
+      ]
+    },
+    {
+      "doc": "DOC7",
+      "source": "00_TaxBench_Source/Reference Files/DOC7_1099-R.pdf",
+      "place": "Portals/Meridian_Retirement_Services/Documents/Tax_Forms/2025_Form_1099-R.pdf",
+      "expect_text": [
+        "Meridian Retirement Services",
+        "1099-R"
+      ]
+    },
+    {
+      "doc": "DOC8",
+      "source": "00_TaxBench_Source/Reference Files/DOC8_1098-E.pdf",
+      "place": "Portals/Lakeshore_Loan_Servicing/Documents/2025_Form_1098-E.pdf",
+      "expect_text": [
+        "Lakeshore Loan Servicing",
+        "1098-E"
+      ]
+    }
+  ],
+  "expert_return": "00_TaxBench_Source/Final Return/S000005_Thomas_Gonzalez_FedCA_2025.pdf",
+  "answer_key": "hidden/answer_key.json",
+  "simulated_user": "hidden/simulated_user.json",
+  "evaluation": "hidden/evaluation.json",
+  "accounts": {
+    "larkspur_checking": {
+      "name": "Larkspur Savings Bank checking",
+      "routing": "122000999",
+      "number": "0000384471"
+    }
+  },
+  "payees": {
+    "IRS": {
+      "name": "IRS (U.S. Treasury)",
+      "requires_approval": true,
+      "return": "federal",
+      "aliases": [
+        "irs",
+        "internal revenue service",
+        "us treasury",
+        "u.s. treasury",
+        "united states treasury",
+        "irs direct pay"
+      ]
+    },
+    "FTB": {
+      "name": "California Franchise Tax Board",
+      "requires_approval": true,
+      "return": "CA",
+      "aliases": [
+        "ftb",
+        "franchise tax board",
+        "california franchise tax board",
+        "ca ftb",
+        "california ftb"
+      ]
+    },
+    "Arroyo Medical Group": {
+      "name": "Arroyo Medical Group",
+      "aliases": [
+        "arroyo",
+        "arroyo medical",
+        "arroyo medical group",
+        "arroyo medical group billing"
+      ]
+    }
+  },
+  "filing": {
+    "federal": {
+      "name": "Federal return (Form 1040)",
+      "form": "f1040",
+      "balance_due": "37",
+      "payee": "IRS"
+    },
+    "CA": {
+      "name": "California return (Form 540)",
+      "form": "ca540",
+      "balance_due": "114",
+      "payee": "FTB"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "kind": "tax",
+      "start": "2026-03-16T09:00",
+      "template": "task_T1.md.tmpl"
+    },
+    "C3": {
+      "kind": "consumer",
+      "start": "2026-03-10T09:00",
+      "template": "task_C3.md.tmpl"
+    },
+    "T3": {
+      "kind": "tax",
+      "start": "2026-03-16T09:00",
+      "template": "task_T3.md.tmpl"
+    },
+    "T2": {
+      "kind": "documents",
+      "start": "2026-02-20T09:00",
+      "template": "task_T2.md.tmpl"
+    },
+    "C1": {
+      "kind": "consumer",
+      "start": "2026-01-22T09:00",
+      "template": "task_C1.md.tmpl"
+    },
+    "C5": {
+      "kind": "consumer",
+      "start": "2026-03-02T09:00",
+      "template": "task_C5.md.tmpl"
+    },
+    "T4": {
+      "kind": "advice",
+      "start": "2026-01-09T09:00",
+      "template": "task_T4.md.tmpl"
+    }
+  },
+  "output_spec": {
+    "f1040": {
+      "title": "Form 1040",
+      "lines": {
+        "filing_status": "Filing status: single, mfj, mfs, hoh or qss",
+        "1a": "Total amount from Form(s) W-2, box 1",
+        "1z": "Add lines 1a through 1h",
+        "2b": "Taxable interest",
+        "3a": "Qualified dividends",
+        "3b": "Ordinary dividends",
+        "4b": "IRA distributions, taxable amount",
+        "7a": "Capital gain or (loss)",
+        "8": "Additional income from Schedule 1, line 10",
+        "9": "Total income",
+        "10": "Adjustments to income from Schedule 1, line 26",
+        "11a": "Adjusted gross income",
+        "12e": "Standard deduction or itemized deductions",
+        "13a": "Qualified business income deduction",
+        "14": "Add lines 12e, 13a and 13b",
+        "15": "Taxable income",
+        "16": "Tax",
+        "18": "Add lines 16 and 17",
+        "22": "Subtract line 21 from line 18",
+        "24": "Total tax",
+        "25a": "Federal income tax withheld from Form(s) W-2",
+        "25d": "Total federal income tax withheld (lines 25a through 25c)",
+        "33": "Total payments",
+        "37": "Amount you owe",
+        "38": "Estimated tax penalty"
+      }
+    },
+    "sch1": {
+      "title": "Schedule 1 (Form 1040)",
+      "lines": {
+        "10": "Total additional income",
+        "21": "Student loan interest deduction",
+        "26": "Total adjustments to income"
+      }
+    },
+    "schb": {
+      "title": "Schedule B (Form 1040)",
+      "lines": {
+        "2": "Add the amounts on line 1 (interest)",
+        "4": "Taxable interest",
+        "6": "Total ordinary dividends"
+      }
+    },
+    "schd": {
+      "title": "Schedule D (Form 1040)",
+      "lines": {
+        "1b": "Short-term, Form 8949 box A totals: gain or (loss), column (h)",
+        "7": "Net short-term capital gain or (loss)",
+        "8b": "Long-term, Form 8949 box D totals: gain or (loss), column (h)",
+        "15": "Net long-term capital gain or (loss)",
+        "16": "Combine lines 7 and 15",
+        "21": "Capital loss allowed this year"
+      }
+    },
+    "f2210": {
+      "title": "Form 2210 (optional: include only if you complete it)",
+      "optional": true,
+      "lines": {
+        "4": "Current year tax",
+        "8": "Maximum required annual payment based on prior year's tax",
+        "9": "Required annual payment"
+      }
+    },
+    "ca540": {
+      "title": "California Form 540",
+      "lines": {
+        "13": "Federal adjusted gross income",
+        "14": "California subtractions (Schedule CA (540), Part I, line 27, column B)",
+        "15": "Subtract line 14 from line 13",
+        "16": "California additions (Schedule CA (540), Part I, line 27, column C)",
+        "17": "California adjusted gross income",
+        "18": "Itemized or standard deduction",
+        "19": "Taxable income",
+        "31": "Tax",
+        "32": "Exemption credits",
+        "33": "Subtract line 32 from line 31",
+        "35": "Add line 33 and line 34",
+        "48": "Subtract line 47 from line 35",
+        "64": "Total tax",
+        "71": "California income tax withheld",
+        "78": "Total payments",
+        "91": "Use tax",
+        "92": "Full-year health care coverage box checked (true or false)",
+        "100": "Tax due",
+        "111": "Amount you owe",
+        "113": "Underpayment of estimated tax (FTB 5805)",
+        "114": "Total amount due"
+      }
+    }
+  },
+  "portals": {
+    "Rosebowl_Climbing_Gym": {
+      "name": "Rosebowl Climbing Gym",
+      "actions": {
+        "request-cancellation": {
+          "label": "Request cancellation",
+          "description": "Cancel the monthly membership (30 days' notice; see Account > Membership).",
+          "once": true,
+          "message": "Your cancellation request was submitted."
+        }
+      }
+    },
+    "Marlowe_IT": {
+      "name": "Marlowe IT portal",
+      "actions": {
+        "generate-label": {
+          "label": "Generate prepaid label",
+          "description": "A prepaid label for returning an asset: drop it off at a ParcelPoint store, or have it picked up.",
+          "fields": {
+            "asset": {
+              "type": "choice",
+              "choices": [
+                "MD-L-0417"
+              ]
+            },
+            "method": {
+              "type": "choice",
+              "choices": [
+                "drop-off",
+                "pickup"
+              ]
+            },
+            "date": {
+              "type": "date",
+              "min": "today"
+            }
+          },
+          "rules": [
+            {
+              "when": {
+                "method": "pickup"
+              },
+              "field": "date",
+              "choices": [
+                "2026-03-04",
+                "2026-03-05"
+              ]
+            }
+          ],
+          "once": true,
+          "message": "Label requested for {asset} ({method} on {date})."
+        },
+        "update-ticket": {
+          "label": "Update ticket",
+          "description": "Add a note to an open IT ticket.",
+          "fields": {
+            "ticket": {
+              "type": "choice",
+              "choices": [
+                "IT-5520"
+              ]
+            },
+            "note": {
+              "type": "text"
+            }
+          },
+          "message": "Note added to {ticket}."
+        }
+      }
+    },
+    "Meridian_Retirement_Services": {
+      "name": "Meridian Retirement Services",
+      "actions": {
+        "change-withdrawal": {
+          "label": "Change withdrawal amount",
+          "description": "Change the yearly scheduled IRA payment.",
+          "fields": {
+            "amount": {
+              "type": "amount"
+            },
+            "starting": {
+              "type": "date",
+              "min": "today"
+            }
+          },
+          "message": "Your scheduled payment will be {amount} a year from {starting}."
+        }
+      }
+    }
+  }
+}

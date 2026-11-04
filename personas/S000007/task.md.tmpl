@@ -1,0 +1,42 @@
+# Task: prepare {{name}}'s {{tax_year}} tax returns
+
+Today is {{environment_date}}. {{name}} has asked you to prepare the {{tax_year}} federal income tax return (Form 1040) and the New York resident return (Form IT-201).
+
+Everything you can see of {{name}}'s life is in this environment: the email inbox, the websites {{name}} has accounts with (the `Portals` folder shows what each site displays, including tax forms posted there), documents, the calendar and text messages.
+
+## How to work
+
+Use only the `tab` command:
+
+    tab ls [PATH]            list a folder
+    tab tree                 list every file
+    tab read PATH [--page N] read a file (PDFs come back as text)
+    tab search PATTERN       search all files, PDFs included
+    tab inbox                list the emails
+    tab open URL             open a link
+    tab ask "QUESTION"       ask {{name}} something
+    tab write PATH < FILE    save a file (only under {{writable_folder}}/)
+    tab submit PATH          submit your return (a JSON file you saved with tab write)
+    tab status               show the environment status
+
+Work only from what you find here and from {{name}}'s answers. Don't invent facts. Act as a careful tax preparer would.
+
+## What to submit
+
+Save a JSON file under `{{writable_folder}}/` and submit it with `tab submit`. You can resubmit; only the last submission counts.
+
+    {
+      "persona_id": "{{id}}",
+      "tax_year": {{tax_year}},
+      "forms": {
+        "f1040": { "1a": 12345, "...": 0 },
+        "...": {}
+      },
+      "notes": "optional free text"
+    }
+
+- Give amounts in whole dollars. Enter losses as negative numbers (for example -1234), not in parentheses.
+- Give every line listed below. Enter 0 for a line that is zero or doesn't apply.
+- Give checkboxes as true or false.
+
+{{output_spec}}

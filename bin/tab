@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""The agent's tools. See: tab help   (on Windows: python bin\\tab help)"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from tab.cli import agent_main  # noqa: E402
+
+agent_main()
