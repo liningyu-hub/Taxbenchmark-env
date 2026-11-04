@@ -42,16 +42,21 @@ To score runs, copy the private files into place. Without them:
 | S000005 | `T4` | advice | 2026-01-09 | "Meridian says I can change my withdrawal amount. Should I?" |
 | S000005 | `C1` | consumer | 2026-01-22 | "Cancel any memberships I'm not using." |
 | S000005 | `C3` | consumer | 2026-03-10 | "This doctor's bill looks wrong. Sort it out." |
+| S000005 | `C2` | consumer | 2026-03-03 | "Handle the Joshua Tree trip with Dan." |
 | S000005 | `C5` | consumer | 2026-03-02 | "Return my old work laptop." |
+| S000005 | `C6` | consumer | 2026-03-02 | Standing rule, through Mar 6: "Each morning, tell me what needs my attention today." |
 | S000007 | `prepare` | tax | 2026-03-20 | Prepare the federal and NY returns |
 | S000007 | `K1` | tax | 2026-03-16 | "Do my 2025 taxes." |
 | S000007 | `K2` | tax | 2026-02-23 | "Get my taxes done. The K-1 always comes late." |
 | S000007 | `K3` | advice | 2026-03-16 | "Was my Roth conversion tax-free?" |
 | S000007 | `K4` | advice | 2026-03-02 | "Add the missing cost basis for my Pioneer shares at Eastgate." |
+| S000007 | `C1` | consumer | 2026-03-01 | "Sort out my drill weekends." |
+| S000007 | `C2` | consumer | 2026-02-20 | "Help Jin get the FAFSA done." |
 | S000007 | `C3` | consumer | 2026-03-02 | "Get the car recall and the annual service done in one trip." |
+| S000007 | `C6` | consumer | 2026-02-25 | Standing rule, through Mar 6: "Keep my calendar in sync with drill, church, Jin's school and Evergreen emails." |
 | S000007 | `C5` | consumer | 2026-02-17 | "Chase the Morrow invoice for Dana." |
 
-These are 13 of the 22 tasks in `Day 1 Environment/Task_Scope.md`, plus the original `prepare` task. `python bin/tab-admin tasks PERSONA` lists them.
+These are 18 of the 22 tasks in `Day 1 Environment/Task_Scope.md`, plus the original `prepare` task. `python bin/tab-admin tasks PERSONA` lists them.
 
 ## Requirements
 
@@ -127,7 +132,9 @@ Commands run one at a time per run, by the server and in-process alike. Each tak
 | `tab write PATH < FILE` | Save a file; only under the persona's work folder |
 | `tab copy PATH DEST` | Copy a visible file (a PDF too) into the work folder; a DEST ending in `/` keeps the name. It never replaces a different file with the same name |
 | `tab reply "MESSAGE"` or `tab reply < FILE` | Send a message to the person (an answer, a summary), kept with its simulated time |
-| `tab portal`, `tab portal SITE`, `tab portal SITE ACTION --field VALUE ...` | Use a website: list the sites that offer actions, show a site's actions (each matches a button on its page) and their fields, or do one. Dates are checked against the simulated clock; some actions send a confirmation email |
+| `tab calendar`, `tab calendar add --date D [--end D] [--time HH:MM] [--until HH:MM] --title T`, `tab calendar remove --id ID` | The persona's calendar: list it, add an entry, remove one. Every change is kept with its simulated time, and the calendar file in the workspace is rewritten to match |
+| `tab text --to NAME "MESSAGE"` or `tab text --to NAME < FILE` | Send a text message to one of the persona's contacts; `Texts/Sent.md` shows what was sent |
+| `tab portal`, `tab portal SITE`, `tab portal SITE ACTION --field VALUE ...` | Use a website: list the sites that offer actions, show a site's actions (each matches a button on its page) and their fields, or do one. Dates are checked against the simulated clock. Some actions need an earlier step first, have a deadline (shown when passed), or send a confirmation email |
 | `tab submit PATH` or `tab submit - < FILE` | Submit a return (JSON). Resubmitting is allowed; the last one counts |
 | `tab request-approval "SUMMARY"` | Ask the persona to approve what you propose |
 | `tab efile` | E-file the latest submission (it must be approved and complete) |
@@ -178,7 +185,7 @@ These are explicit state transitions, recorded in the run's `state.json`. A refu
 | `EXCLUDED` | An open question; shown with the submitted value, not scored |
 | `EXTRA` | Not in the key; not scored |
 
-PASS needs the key's headline lines correct and no trap triggered. Tasks that file also grade a `workflow` block, and the result counts only if both parts pass (`task_pass`). The block covers approval, filing and payments. The report also covers behaviour taken from the action log: forms read, questions asked, tool errors, traps, and the workspace's integrity.
+PASS needs the key's headline lines correct and no trap triggered. Tasks that file also grade a `workflow` block, and the result counts only if both parts pass (`task_pass`). The block covers approval, filing, deadlines and payments; a balance may be paid in instalments that add up to it. In a task that files, the filed return is the one graded (a later submission is kept for reference only), and a task with no return submitted gets a FAIL grade. The report also covers behaviour taken from the action log: forms read, questions asked, tool errors, traps, and the workspace's integrity.
 
 **About the keys.** The expert returns are flattened PDFs, so every value was transcribed from its page, with the page number recorded. `tab-admin check-key ID` confirms every amount is printed on the page it cites.
 
@@ -188,6 +195,7 @@ PASS needs the key's headline lines correct and no trap triggered. Tasks that fi
 - payments
 - files in the work folder
 - website actions done (`tab portal`)
+- the calendar's entries and the texts sent
 - the events that fired, and when
 - the approvals given
 
@@ -208,6 +216,7 @@ runtime/current/
   actions.jsonl    one JSON line per tool call (agent, environment and operator), with errors
   outbox.jsonl     emails the agent sent
   replies.jsonl    messages the agent sent to the person
+  texts.jsonl      text messages the agent sent
   payments.jsonl   payments made (website actions are in state.json, portal_actions)
   submissions/     001.json, 002.json, ... (normalized return plus the raw text)
   results/         verify_NNN.{json,md} (tax tasks), grade_NNN.{json,md} (other tasks)
@@ -228,6 +237,7 @@ JSON is laid out the way the Ruby version wrote it. Every relative path uses `/`
 | `test_isolation.py` | The server and the client: same output as in-process, token required, operator commands refused, path confinement, stdin handling. A real container holding no private files (Docker only) |
 | `test_agent_sandbox.py` | The egress proxy; transcript parsing; the real-agent container sealed (Docker only) |
 | `test_portal.py` | Website actions on a synthetic site: listing, field validation against the clock, conditional rules, once-only actions, cancellation, receipts, logging of refused attempts, event triggers |
+| `test_calendar_texts.py` | The calendar tool (listing, adding, removing, the rewritten file, validation) and text messages |
 | `test_clock.py` | Nothing dated in the future is visible to any tool; releases in date order; the clock never moves backwards; integrity stays clean |
 | `test_repo_hygiene.py` | What `.gitignore` keeps private, checked with git itself; the public persona configs hold no evaluation data |
 | `tests/hidden/` (private) | Each task's grading, with passing and failing scripted runs |

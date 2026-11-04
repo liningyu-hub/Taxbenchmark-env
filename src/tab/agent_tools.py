@@ -289,6 +289,35 @@ class AgentTools:
         return (f"Copied {self._rel(full)} to {self._rel(target)} ({size} bytes)",
                 {"from": self._rel(full), "to": self._rel(target), "bytes": size})
 
+    def text(self, to, message: bytes):
+        """A text message to one of the persona's contacts (persona.json "text_contacts"), kept with its simulated
+        time in <run>/texts.jsonl; Texts/Sent.md shows what was sent."""
+        from .rubyisms import json_compact
+        from .timeline import deliver
+        contacts = self.persona.data.get("text_contacts") or []
+        if to not in contacts:
+            raise TabError(f"Unknown contact {json.dumps(to)}. You can text: {', '.join(contacts) or 'nobody'}")
+        if len(message) > MAX_WRITE_BYTES:
+            raise TabError("The message is larger than 1 MB")
+        text = message.decode("utf-8")
+        if not ruby_strip(text):
+            raise TabError(f'Nothing to send: tab text --to {to} "MESSAGE" or tab text --to {to} < FILE')
+        state = self.run.state()
+        path = self.run.path("texts.jsonl")
+        sent = [json.loads(l) for l in read_text(path).split("\n") if l] if path.is_file() else []
+        record = {"id": len(sent) + 1, "at": state.data["now"], "to": to, "text": text}
+        with open(path, "ab") as f:
+            f.write((json_compact(record) + "\n").encode("utf-8"))
+        me = self.persona.name.split()[0]
+        lines = ["# Text messages you sent", ""]
+        for r in sent + [record]:
+            day = dt.date.fromisoformat(r["at"][:10])
+            lines += [f"**To {r['to']}** · {day.month}/{day.day}/{day.year} {r['at'][11:]}  ",
+                      f"{me}: {r['text'].rstrip()}", ""]
+        deliver(self.run, "Texts/Sent.md", "\n".join(lines), state)
+        state.save()
+        return f"Text sent to {to}.", {"to": to, "text_id": record["id"], "text": text}
+
     def reply(self, message: bytes):
         """A message to the person the agent works for (an answer, a summary, a brief), kept with its simulated
         time in <run>/replies.jsonl, outside the workspace."""
@@ -315,7 +344,12 @@ class AgentTools:
                f"Lines received: {parsed['line_count']}."]
         if parsed["warnings"]:
             out.append("Warnings:\n  - " + "\n  - ".join(parsed["warnings"]))
-        out.append("You can resubmit; only the last submission counts.")
+        filings = self.run.state()["filings"]
+        if filings:
+            out.append(f"The return is already filed (submission #{filings[-1]['submission_id']}). This submission "
+                       "is kept for reference only: it won't be filed, and the filed return is the one that counts.")
+        else:
+            out.append("You can resubmit; only the last submission counts.")
         return "\n".join(out), {"submission_id": id, "lines": parsed["line_count"], "warnings": parsed["warnings"]}
 
     # -- helpers -------------------------------------------------------------------------------------------------

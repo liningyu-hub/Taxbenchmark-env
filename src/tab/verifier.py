@@ -24,9 +24,16 @@ class Verifier:
 
     def verify(self, submission_id=None):
         """Returns (result dict, markdown report, path base of the saved files)."""
+        filing_task = bool(self.run.task.get("requires_filing"))
+        if submission_id is None and filing_task and self.run.state()["filings"]:
+            # In a task that files, the return that counts is the one filed, not a later resubmission.
+            submission_id = self.run.state()["filings"][-1]["submission_id"]
         record = self.run.submission(submission_id)
         if not record:
-            raise TabError("Nothing to verify: there is no submission yet.")
+            if not filing_task:
+                raise TabError("Nothing to verify: there is no submission yet.")
+            # A task that files gets a FAIL grade when no return was submitted (an empty return, every line missing).
+            record = {"id": 0, "submitted_at": None, "submission": {"forms": {}}}
 
         key = self.persona.answer_key()
         submitted = record["submission"]["forms"]
@@ -63,6 +70,9 @@ class Verifier:
             result["workflow"] = flow
             result["summary"]["workflow_pass"] = flow["pass"]
             result["summary"]["task_pass"] = result["summary"]["pass"] and flow["pass"]
+            if record["id"] == 0:
+                result["summary"]["no_submission"] = True
+                result["summary"]["pass"] = result["summary"]["task_pass"] = False
         markdown = report.markdown(result, self.persona)
         base = self.run.save_result(result, markdown)
         self.run.log(actor="admin", tool="verify", args=[str(record["id"])], detail=result["summary"])

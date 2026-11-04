@@ -8,7 +8,9 @@ def markdown(result: dict, persona) -> str:
     traps = "none" if not s["traps_triggered"] else ", ".join(s["traps_triggered"])
     out = [f"# Verification: {persona.id} {persona.name}, submission {result['submission_id']}",
            "",
-           f"Run `{result['run_id']}`, submitted {result['submitted_at']}, verified {result['verified_at']}.",
+           (f"Run `{result['run_id']}`, submitted {result['submitted_at']}, verified {result['verified_at']}."
+            if not s.get("no_submission") else
+            f"Run `{result['run_id']}`, verified {result['verified_at']}. No return was submitted."),
            "",
            f"**Result: {'PASS' if s['pass'] else 'FAIL'}.** Headline lines {s['headline_correct']}/{s['headline_lines']} "
            f"correct; all scored lines {s['correct']}/{s['scored_lines']} ({to_s(ruby_round(s['accuracy'] * 100, 1))}%); "

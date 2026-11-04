@@ -10,10 +10,13 @@ nothing about grading lives there):
       "label": "Request cancellation",           the button's text on the page
       "description": "...",
       "fields": {"<field>": {"type": "choice" | "multi" | "date" | "amount" | "text", "choices": [...],
-                             "min": "today" | DATE, "max": "today" | DATE, "optional": true}},
+                             "min": "today" | DATE, "max": "today" | DATE, "optional": true,
+                             "starts": {"<choice>": DATE | DATETIME}}},   a choice that has started can't be taken
       "rules": [{"when": {"<field>": value}, "field": "<field>", "choices": [...]},       a narrower choice list
                 {"when": {...}, "field": "<field>", "excludes": [...], "error": "..."}],    a refusal
       "once": true,                              only while no earlier one is active
+      "requires": ["<action>"],                  only after those actions are done (and not cancelled)
+      "deadline": {"at": DATETIME, "after": "..."},   done at or after it: recorded "after_deadline", message shown
       "cancels": "<action>",                     takes --confirmation and cancels that earlier action
       "message": "... {field} ...",              shown when done
       "receipt": {"from": "...", "subject": "...", "body": "... {field} {confirmation} ..."}}}}   an email
@@ -86,7 +89,7 @@ class Portal:
         missing = [n for n, f in fields.items() if not f.get("optional") and n not in given]
         if missing:
             raise TabError(f"Missing --{missing[0]}. Run: tab portal {sid}")
-        values = {n: self._value(n, fields[n], v, state.now.date()) for n, v in given.items()}
+        values = {n: self._value(n, fields[n], v, state.now) for n, v in given.items()}
         for rule in action.get("rules", []):
             if all(values.get(k) == v for k, v in rule.get("when", {}).items()) and rule["field"] in values:
                 value = values[rule["field"]]
@@ -96,6 +99,10 @@ class Portal:
                 if any(c in rule.get("excludes", []) for c in chosen):
                     raise TabError(rule.get("error", f"--{rule['field']} can't be {', '.join(chosen)} here"))
         active = [r for r in records if r["site"] == sid and not r.get("cancelled_at")]
+        for needed in action.get("requires", []):
+            if not any(r["action"] == needed for r in active):
+                label = site["actions"].get(needed, {}).get("label", needed)
+                raise TabError(f"Do \"{label}\" ({needed}) first.")
         if action.get("once"):
             done = [r for r in active if r["action"] == aid]
             if done:
@@ -113,10 +120,15 @@ class Portal:
         if target is not None:
             target["cancelled_at"] = state.data["now"]
             record["cancels"] = target["confirmation"]
+        late = action.get("deadline") and state.data["now"] >= action["deadline"]["at"]
+        if late:
+            record["after_deadline"] = True
         records.append(record)
         out = [f"{action.get('label', aid)}: done. Confirmation {record['confirmation']}."]
         if action.get("message"):
             out.append(self._fill(action["message"], values, record))
+        if late and action["deadline"].get("after"):
+            out.append(action["deadline"]["after"])
         if action.get("receipt"):
             out.append(f"New email: {self._receipt(action['receipt'], values, record, state)}")
         state.save()
@@ -162,15 +174,26 @@ class Portal:
         return given
 
     @staticmethod
+    def _started(start: str, now) -> bool:
+        """Has a dated choice begun? A date-and-time once that moment is reached; a date only after that day."""
+        if "T" in start:
+            return now >= dt.datetime.fromisoformat(start)
+        return now.date() > dt.date.fromisoformat(start)
+
+    @staticmethod
     def _limit(text, today):
         return today if text == "today" else dt.date.fromisoformat(text)
 
-    def _value(self, name, f, raw, today):
+    def _value(self, name, f, raw, now):
         kind = f.get("type", "text")
         raw = raw.strip()
+        today = now.date()
         if kind == "choice":
             if raw not in f["choices"]:
                 raise TabError(f"--{name} must be one of: {', '.join(f['choices'])}")
+            start = (f.get("starts") or {}).get(raw)
+            if start and self._started(start, now):
+                raise TabError(f"--{name} {raw} has already passed (it is now {now.strftime('%Y-%m-%d %H:%M')}).")
             return raw
         if kind == "multi":
             chosen = [c.strip() for c in raw.split(",") if c.strip()]

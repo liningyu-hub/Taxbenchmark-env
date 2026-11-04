@@ -6,9 +6,14 @@ private "checks":
   event_fired            the event "event" happened (the other side answered)
   email_after_event      an email to "to" whose subject or body matches "body" was sent after "event" fired
   no_email_before_event  no email to "to" matching "body" was sent before "event" fired (or at all, if it never did)
+  no_text_before_event   the same for texts to the contact "to"
+  no_email_to            no email to "to" or anyone at "to_domain" matching "body"
+  portal_action, no_portal_action, calendar, text_sent, reply, asked_before, has_copies, folder_only,
+  folder_text_mentions, any_of, all_of     see the branches of _check and their helpers
 "body" regexes match the subject, the message, or the text of an attached Markdown or text file (a forwarded email).
 PASS = every check passes and no trap was triggered. Results go to results/grade_NNN.{json,md}.
-The checks live in persona.json, which no agent tool can read; the agent sees only the task text.
+The checks live in the persona's private hidden/evaluation.json, merged in server-side; no agent tool can read it, and
+the agent sees only the task text.
 """
 import json
 import re
@@ -82,8 +87,22 @@ class Grader:
         def in_time(m):
             return "by" not in c or m["at"][:10] <= c["by"]
 
+        sends, texts_seq, portals = self._log_index()
+        standing = {r["confirmation"] for r in state["portal_actions"] if not r.get("cancelled_at")}
+        after = next((seq for seq, confirmation in portals.get(tuple(c.get("after_portal") or ()), [])
+                      if confirmation in standing), None)
+
+        def after_portal(m):
+            """Sent after the first such portal action that still stands (a cancelled booking doesn't count), by the
+            action log's order (not the clock: both can happen in the same simulated minute). Emails are found by
+            their Sent copy, texts by their id."""
+            if not c.get("after_portal"):
+                return True
+            seq = sends.get(m.get("path")) if "path" in m else texts_seq.get(m.get("id"))
+            return after is not None and seq is not None and seq > after
+
         if kind == "email_sent":
-            hits = [m for m in outbox if to_them(m) and says(m) and attaches(m) and in_time(m)]
+            hits = [m for m in outbox if to_them(m) and says(m) and attaches(m) and in_time(m) and after_portal(m)]
             detail = f"email #{hits[0]['id']}: \"{hits[0]['subject']}\"" if hits else f"no such email to {to}"
             ok = bool(hits)
         elif kind == "no_payment_to":
@@ -96,10 +115,24 @@ class Grader:
             detail = f"at {which[0]['at']}" if ok else "never happened"
         elif kind in ("portal_action", "no_portal_action"):
             ok, detail = self._portal_check(c, state)
-        elif kind == "any_of":
+        elif kind in ("any_of", "all_of"):
             results = [self._check({"id": c["id"], **sub}, state, outbox) for sub in c["checks"]]
-            ok = any(r["ok"] for r in results)
-            detail = next((r["detail"] for r in results if r["ok"]), "; ".join(r["detail"] for r in results))
+            if kind == "any_of":
+                ok = any(r["ok"] for r in results)
+                detail = next((r["detail"] for r in results if r["ok"]), None) or \
+                    "none met: " + "; ".join(r["detail"] for r in results)
+            else:
+                ok = all(r["ok"] for r in results)
+                detail = "all met" if ok else "not met: " + "; ".join(r["detail"] for r in results if not r["ok"])
+        elif kind == "calendar":
+            ok, detail = self._calendar_check(c, state)
+        elif kind == "text_sent":
+            texts = self._texts()
+            event = state["fired_at"].get(c.get("after_event")) if c.get("after_event") else None
+            hits = [t for t in texts if t["to"] == c["to"] and all(re.search(b, t["text"], re.I) for b in bodies)
+                    and after_portal(t) and (not c.get("after_event") or (event is not None and t["at"] >= event["at"]))]
+            ok = bool(hits)
+            detail = f"text #{hits[0]['id']} at {hits[0]['at']}" if ok else f"no such text to {c['to']}"
         elif kind == "no_email_to":
             domain = c.get("to_domain", "").lower()
             hits = [m for m in outbox if says(m) and any(
@@ -117,6 +150,11 @@ class Grader:
             early = [m for m in outbox if to_them(m) and says(m) and (not fired or m["id"] <= fired["emails_sent"])]
             ok = not early
             detail = "none" if ok else ", ".join(f"email #{m['id']} at {m['at']}" for m in early)
+        elif kind == "no_text_before_event":
+            early = [t for t in self._texts() if t["to"] == c["to"] and all(re.search(b, t["text"], re.I) for b in bodies)
+                     and (not fired or t["at"] < fired["at"])]
+            ok = not early
+            detail = "none" if ok else ", ".join(f"text #{t['id']} at {t['at']}" for t in early)
         elif kind in ("has_copies", "folder_only", "folder_text_mentions"):
             ok, detail = self._folder_check(c)
         elif kind == "reply":
@@ -126,7 +164,8 @@ class Grader:
             if c.get("key_value"):
                 fid, lid = c["key_value"].split(".")
                 patterns.append(amount_pattern(self.persona.answer_key()["forms"][fid][lid]["value"]))
-            hits = [r for r in self._replies() if all(re.search(p, r["text"], re.I) for p in patterns)]
+            hits = [r for r in self._replies() if all(re.search(p, r["text"], re.I) for p in patterns)
+                    and ("on" not in c or r["at"][:10] == c["on"]) and self._noise_comes_last(c, patterns, r["text"])]
             ok = bool(hits)
             detail = f"reply #{hits[0]['id']} at {hits[0]['at']}" if ok else \
                 f"no such reply ({len(self._replies())} sent)"
@@ -152,12 +191,77 @@ class Grader:
         shown = ", ".join(value) if isinstance(value, list) else str(value)
         return re.fullmatch(matcher, shown, re.I | re.S) is not None
 
+    @staticmethod
+    def _noise_comes_last(c, patterns, text) -> bool:
+        """With "noise" patterns: a reply may mention noise only after every required item (patterns): the real
+        items lead. Without "noise": always true."""
+        if not c.get("noise"):
+            return True
+        last_needed = max((re.search(p, text, re.I).start() for p in patterns), default=-1)
+        first_noise = min((m.start() for n in c["noise"] for m in [re.search(n, text, re.I)] if m), default=None)
+        return first_noise is None or first_noise > last_needed
+
+    def _log_index(self) -> tuple:
+        """From the action log, the order (seq) of each sent email (by its Sent path), each text (by id) and each
+        successful action on each (site, action), with its confirmation number, in order."""
+        if not hasattr(self, "_index"):
+            sends, texts, portals = {}, {}, {}
+            for a in self.run.actions():
+                if a["actor"] != "agent" or not a["ok"]:
+                    continue
+                detail = a.get("detail") or {}
+                if a["tool"] == "send":
+                    sends[detail.get("sent")] = a["seq"]
+                elif a["tool"] == "text":
+                    texts[detail.get("text_id")] = a["seq"]
+                elif a["tool"] == "portal" and len(a["args"]) >= 2:
+                    portals.setdefault((a["args"][0], a["args"][1]), []).append((a["seq"], detail.get("confirmation")))
+            self._index = (sends, texts, portals)
+        return self._index
+
+    def _calendar_check(self, c, state) -> tuple:
+        """Calendar entries still on the calendar (not removed) that match "date", "end", "time" and "title" (a
+        pattern); "undated": true matches entries without a date. "expect": "present" (at least one, the default),
+        "absent" (none), or "at_most": N."""
+        from .agenda import Agenda, describe
+        entries = [e for e in Agenda(self.run).entries(state) if not e.get("removed_at")]
+
+        def matches(e):
+            if c.get("undated") and e.get("date"):
+                return False
+            for key in ("date", "end", "time"):
+                if key in c and e.get(key) != c[key]:
+                    return False
+            return not c.get("title") or re.search(c["title"], e["title"], re.I) is not None
+        hits = [e for e in entries if matches(e)]
+        shown = "; ".join(f"{e['id']} {describe(e)} {e['title']}" for e in hits) or "none"
+        if "at_most" in c:
+            return len(hits) <= c["at_most"], f"{len(hits)} matching: {shown}"
+        if c.get("expect") == "absent":
+            return not hits, f"matching: {shown}"
+        return bool(hits), f"matching: {shown}"
+
+    def _texts(self) -> list:
+        path = self.run.path("texts.jsonl")
+        if not path.is_file():
+            return []
+        return [json.loads(line) for line in read_text(path).split("\n") if line]
+
     def _portal_check(self, c, state) -> tuple:
         """portal_action: an active action on the site matching "fields", optionally done "by" a date, after
         "after_event" fired, with "only" (no other active one) and "latest_for" (only each field value's latest action
-        counts, so a corrected entry replaces a wrong one). no_portal_action: no done action matches."""
+        counts, so a corrected entry replaces a wrong one). "before_action" counts only the actions done before the
+        site's first standing action of that name (with "latest": the entry in place when the form was submitted).
+        no_portal_action: no done action matches."""
         done = [r for r in state["portal_actions"] if r["site"] == c["site"] and r["action"] == c.get("action", r["action"])]
         active = [r for r in done if not r.get("cancelled_at")]
+        if c.get("before_action"):  # what was in place when the site's first (standing) <action> was done: a form
+            ends = [r["id"] for r in state["portal_actions"] if r["site"] == c["site"]  # as it was submitted
+                    and r["action"] == c["before_action"] and not r.get("cancelled_at")]
+            if ends:
+                active = [r for r in active if r["id"] < ends[0]]
+        if c.get("latest") and active:  # only the most recent one counts (a form filled in again replaces it)
+            active = active[-1:]
         if c.get("latest_for"):
             latest = {}
             for r in active:
@@ -171,7 +275,8 @@ class Grader:
             return not hits, "none" if not hits else ", ".join(f"{r['confirmation']} at {r['at']}" for r in hits)
         fired = state["fired_at"].get(c.get("after_event")) if c.get("after_event") else None
         hits = [r for r in active if matches(r) and ("by" not in c or r["at"][:10] <= c["by"])
-                and (not c.get("after_event") or (fired is not None and r["at"] >= fired["at"]))]
+                and (not c.get("after_event") or (fired is not None and r["at"] >= fired["at"]))
+                and not (c.get("before_deadline") and r.get("after_deadline"))]
         if not hits:
             return False, f"no matching {c['action']} on {c['site']} ({len(active)} active)"
         if c.get("only") and len(active) > 1:

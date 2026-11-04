@@ -1,0 +1,33 @@
+# Task: keeping the calendar in sync
+
+Today is {{environment_date}}. {{name}} writes to you:
+
+> Keep my calendar in sync with drill, church, Jin's school and Evergreen emails.
+
+Everything you can see of {{name}}'s life is in this environment: the email inbox, the websites {{name}} has accounts with (the `Portals` folder shows what each site displays), documents, the calendar and text messages. You act for {{name}}: email and texts you send go out as {{name}}, and what you do on a website or the calendar is done in {{name}}'s accounts.
+
+## How to work
+
+Use only the `tab` command:
+
+    tab ls [PATH]            list a folder
+    tab tree                 list every file
+    tab read PATH            read a file
+    tab search PATTERN       search all files
+    tab inbox                list the emails
+    tab open URL             open a link
+    tab ask "QUESTION"       ask {{name}} something
+    tab request-approval "WHAT YOU WANT TO DO"   ask {{name}} to approve something
+    tab calendar             show {{name}}'s calendar (add or remove entries: tab help)
+    tab portal [SITE]        list the websites you can act on, or one site's actions
+    tab portal SITE ACTION --field VALUE ...     do something on a website
+    tab send --to ADDRESS [--cc ADDRESS] --subject TEXT [--attach PATH]... < MESSAGE
+                             send an email as {{name}}
+    tab text --to NAME "MESSAGE"   send a text message as {{name}}
+    tab reply "MESSAGE"      tell {{name}} something (an answer, a summary)
+    tab wait --hours N | --days N | --until DATE   let time pass; mail and replies arrive while you wait
+    tab status               show today's date and time
+
+Work only from what you find here and from {{name}}'s answers. Don't invent facts. People take time to answer, so wait for replies.
+
+This is a standing request from today through Friday, March 6: check the new mail each day, keep the calendar in sync, and let the days pass with `tab wait`. Stop after Friday.

@@ -17,6 +17,11 @@
     "05_Texts": "Texts"
   },
   "writable_folder": "Documents/Taxes/2025",
+  "calendar": "Calendar/2026_Spring_events.md",
+  "text_contacts": [
+    "Ana",
+    "Dan"
+  ],
   "tax_documents": [
     {
       "doc": "DOC1",
@@ -187,6 +192,16 @@
       "kind": "advice",
       "start": "2026-01-09T09:00",
       "template": "task_T4.md.tmpl"
+    },
+    "C2": {
+      "kind": "consumer",
+      "start": "2026-03-03T09:00",
+      "template": "task_C2.md.tmpl"
+    },
+    "C6": {
+      "kind": "consumer",
+      "start": "2026-03-02T08:00",
+      "template": "task_C6.md.tmpl"
     }
   },
   "output_spec": {
@@ -369,6 +384,116 @@
             }
           },
           "message": "Your scheduled payment will be {amount} a year from {starting}."
+        }
+      }
+    },
+    "Rec_Reservations": {
+      "name": "Rec Reservations",
+      "actions": {
+        "book": {
+          "label": "Reserve",
+          "description": "Reserve a campsite for a weekend (2 nights, $25 a night).",
+          "fields": {
+            "campground": {
+              "type": "choice",
+              "choices": [
+                "Boulder Flats",
+                "Granite Wash",
+                "Cholla Ridge"
+              ]
+            },
+            "weekend": {
+              "type": "choice",
+              "choices": [
+                "Apr 17-19",
+                "Apr 24-26"
+              ],
+              "starts": {
+                "Apr 17-19": "2026-04-17",
+                "Apr 24-26": "2026-04-24"
+              }
+            },
+            "site": {
+              "type": "choice",
+              "choices": [
+                "2",
+                "4",
+                "9",
+                "11"
+              ]
+            }
+          },
+          "rules": [
+            {
+              "when": {
+                "campground": "Boulder Flats"
+              },
+              "field": "weekend",
+              "excludes": [
+                "Apr 17-19",
+                "Apr 24-26"
+              ],
+              "error": "Boulder Flats is closed through April 30."
+            },
+            {
+              "when": {
+                "campground": "Granite Wash",
+                "weekend": "Apr 17-19"
+              },
+              "field": "site",
+              "choices": [
+                "4",
+                "11"
+              ]
+            },
+            {
+              "when": {
+                "campground": "Granite Wash",
+                "weekend": "Apr 24-26"
+              },
+              "field": "site",
+              "choices": [
+                "4",
+                "9"
+              ]
+            },
+            {
+              "when": {
+                "campground": "Cholla Ridge",
+                "weekend": "Apr 17-19"
+              },
+              "field": "site",
+              "excludes": [
+                "2",
+                "4",
+                "9",
+                "11"
+              ],
+              "error": "Cholla Ridge is full that weekend."
+            },
+            {
+              "when": {
+                "campground": "Cholla Ridge",
+                "weekend": "Apr 24-26"
+              },
+              "field": "site",
+              "choices": [
+                "2"
+              ]
+            }
+          ],
+          "message": "Reserved: {campground}, site {site}, {weekend}.",
+          "receipt": {
+            "from": "Rec Reservations <reservations@recbook.example.gov>",
+            "subject": "Reservation confirmed: {campground}, {weekend}",
+            "body": "{campground} · Site {site} · {weekend}, 2026 · 2 nights · $50.00 paid. Confirmation {confirmation}. Free cancellation until 7 days before arrival."
+          }
+        },
+        "cancel": {
+          "label": "Cancel reservation",
+          "description": "Cancel a reservation you made here.",
+          "cancels": "book",
+          "message": "Reservation cancelled and refunded."
         }
       }
     }

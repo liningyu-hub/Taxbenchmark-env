@@ -17,6 +17,11 @@
     "05_Texts": "Texts"
   },
   "writable_folder": "Documents/Taxes/2025",
+  "calendar": "Calendar/2026_Spring_events.md",
+  "text_contacts": [
+    "Jin",
+    "Dana"
+  ],
   "tax_documents": [
     {
       "doc": "DOC1",
@@ -159,6 +164,21 @@
       "kind": "advice",
       "start": "2026-03-02T09:00",
       "template": "task_K4.md.tmpl"
+    },
+    "C1": {
+      "kind": "consumer",
+      "start": "2026-03-01T09:00",
+      "template": "task_C1.md.tmpl"
+    },
+    "C2": {
+      "kind": "consumer",
+      "start": "2026-02-20T09:00",
+      "template": "task_C2.md.tmpl"
+    },
+    "C6": {
+      "kind": "consumer",
+      "start": "2026-02-25T09:00",
+      "template": "task_C6.md.tmpl"
     }
   },
   "output_spec": {
@@ -309,7 +329,13 @@
                 "2026-03-14 08:00",
                 "2026-03-21 08:00",
                 "2026-03-28 08:00"
-              ]
+              ],
+              "starts": {
+                "2026-03-07 08:00": "2026-03-07T08:00",
+                "2026-03-14 08:00": "2026-03-14T08:00",
+                "2026-03-21 08:00": "2026-03-21T08:00",
+                "2026-03-28 08:00": "2026-03-28T08:00"
+              }
             },
             "services": {
               "type": "multi",
@@ -372,6 +398,120 @@
             }
           },
           "message": "Basis saved for {lot}: {basis}, acquired {acquired}."
+        }
+      }
+    },
+    "Lakeview_Inn": {
+      "name": "Lakeview Inn",
+      "actions": {
+        "cancel-booking": {
+          "label": "Cancel booking",
+          "description": "Cancel a booking (free until 48 hours before arrival).",
+          "fields": {
+            "booking": {
+              "type": "choice",
+              "choices": [
+                "LV-30815"
+              ]
+            }
+          },
+          "once": true,
+          "deadline": {
+            "at": "2026-03-11T00:00",
+            "after": "Cancelled within 48 hours of arrival: one night has been charged."
+          },
+          "message": "Booking {booking} cancelled."
+        },
+        "book": {
+          "label": "Book a room",
+          "description": "Book a room.",
+          "fields": {
+            "dates": {
+              "type": "choice",
+              "choices": [
+                "2026-03-20 to 2026-03-22"
+              ],
+              "starts": {
+                "2026-03-20 to 2026-03-22": "2026-03-20"
+              }
+            }
+          },
+          "message": "Room booked: {dates}.",
+          "receipt": {
+            "from": "Lakeview Inn <stay@lakeviewinn.example.com>",
+            "subject": "Booking confirmed: {dates}",
+            "body": "Confirmation {confirmation} · {dates} · 2 nights · Free cancellation until 48 hours before arrival."
+          }
+        }
+      }
+    },
+    "StudentAid": {
+      "name": "StudentAid",
+      "actions": {
+        "consent": {
+          "label": "Give consent",
+          "description": "Consent to retrieve your federal tax information directly from the IRS (fills in the 2024 tax data).",
+          "once": true,
+          "message": "Consent recorded. Your 2024 federal tax information will be filled in from the IRS."
+        },
+        "household": {
+          "label": "Household",
+          "description": "Your marital status, household size and number in college.",
+          "requires": [
+            "consent"
+          ],
+          "fields": {
+            "marital_status": {
+              "type": "choice",
+              "choices": [
+                "never married",
+                "married",
+                "remarried",
+                "unmarried, living together",
+                "divorced",
+                "separated",
+                "widowed"
+              ]
+            },
+            "household_size": {
+              "type": "choice",
+              "choices": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8"
+              ]
+            },
+            "in_college": {
+              "type": "choice",
+              "choices": [
+                "1",
+                "2",
+                "3",
+                "4"
+              ]
+            }
+          },
+          "message": "Household section saved."
+        },
+        "submit": {
+          "label": "Sign and submit",
+          "description": "Sign and submit your contributor section.",
+          "requires": [
+            "consent",
+            "household"
+          ],
+          "once": true,
+          "message": "Your section is signed and submitted.",
+          "receipt": {
+            "from": "Federal Student Aid <noreply@studentaid.example.gov>",
+            "subject": "FAFSA contributor section submitted",
+            "body": "Your contributor section for Jin T. Jones's 2026–27 FAFSA form was submitted. Confirmation {confirmation}."
+          }
         }
       }
     }

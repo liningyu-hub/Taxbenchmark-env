@@ -1,4 +1,4 @@
-"""One persona = personas/<id>/persona.json (public config) + hidden/ (answer key, simulated user).
+"""One persona = personas/<id>/persona.json (public config) + hidden/ (evaluation.json, answer key, simulated user).
 
 The persona's documents themselves stay in the Day 1 Environment folder and are only read.
 """

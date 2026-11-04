@@ -30,6 +30,9 @@ AGENT_HELP = """tab: tools for working in the tax environment
   tab reply "MESSAGE" | tab reply < FILE   send a message to the person you work for (an answer, a summary)
   tab write PATH < FILE     save standard input to PATH (only under the work folder)
   tab copy PATH DEST        copy a file (PDFs too) into the work folder; DEST ending in / keeps the name
+  tab calendar [add --date D [--end D] [--time HH:MM] [--until HH:MM] --title TEXT | remove --id ID]
+                            show the calendar, or add or remove an entry
+  tab text --to NAME "MESSAGE" | tab text --to NAME < FILE   send a text message
   tab portal [SITE [ACTION --field VALUE ...]]   use a website: list sites, show a site's actions, do one
   tab submit PATH           submit your return (a JSON file in the environment)
   tab submit - < FILE       submit your return from standard input
@@ -128,6 +131,14 @@ def _dispatch(run, cmd, argv, stdin, logged_args) -> str:
             raise TabError("Usage: tab send --to ADDRESS [--cc ADDRESS] --subject TEXT [--attach PATH]... "
                            "< MESSAGE")
         text, detail = tools.send(to, cc, subject, attach, stdin.read())
+    elif cmd == "calendar":
+        from .agenda import Agenda
+        text, detail = Agenda(run).handle(argv)
+    elif cmd == "text":
+        to = take_option(argv, "--to")
+        if to is None:
+            raise TabError('Usage: tab text --to NAME "MESSAGE"   or   tab text --to NAME < FILE')
+        text, detail = tools.text(to, " ".join(argv).encode("utf-8") if argv else stdin.read())
     elif cmd == "portal":
         from .portal import Portal
         text, detail = Portal(run).handle(argv)

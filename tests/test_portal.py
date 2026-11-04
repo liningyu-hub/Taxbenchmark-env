@@ -33,7 +33,19 @@ PORTALS = {SITE: {
         "cancel-class": {"label": "Cancel a class", "description": "Cancel a booked class.", "cancels": "book-class",
                          "message": "Class cancelled."},
         "freeze": {"label": "Freeze membership", "description": "Freeze once.", "once": True,
-                   "message": "Membership frozen."}}}}
+                   "message": "Membership frozen."},
+        "unfreeze-request": {"label": "Ask to unfreeze", "description": "Needs a freeze first.", "requires": ["freeze"],
+                             "message": "Unfreeze requested."},
+        "leave": {"label": "Leave", "description": "Free until the deadline.", "once": True,
+                  "deadline": {"at": "2026-03-11T00:00", "after": "A late fee applies."},
+                  "message": "You have left."},
+        "book-slot": {"label": "Book a slot", "description": "Choices that are dates.",
+                      "fields": {"slot": {"type": "choice",
+                                          "choices": ["2026-03-10 08:00", "2026-03-10 18:00", "Mar 9-11", "Mar 10-12"],
+                                          "starts": {"2026-03-10 08:00": "2026-03-10T08:00",
+                                                     "2026-03-10 18:00": "2026-03-10T18:00",
+                                                     "Mar 9-11": "2026-03-09", "Mar 10-12": "2026-03-10"}}},
+                      "message": "Booked {slot}."}}}}
 
 
 @pytest.fixture
@@ -118,3 +130,32 @@ def test_portal_needs_no_access_outside_the_workspace(gym):
     for site in ("..", "../hidden", "../../personas"):
         status, _, err = agent("portal", site)
         assert status == 1 and "Unknown site" in err
+
+
+def test_an_action_can_require_an_earlier_one(gym):
+    status, _, err = agent("portal", SITE, "unfreeze-request")
+    assert status == 1 and "freeze" in err
+    agent("portal", SITE, "freeze")
+    assert agent("portal", SITE, "unfreeze-request")[0] == 0
+
+
+def test_a_deadline_is_recorded_against_the_clock(gym):
+    status, out, _ = agent("portal", SITE, "leave")
+    assert status == 0 and "late fee" not in out and not records()[-1].get("after_deadline")
+
+
+def test_an_action_after_its_deadline_is_marked(gym):
+    agent("wait", "--until", "2026-03-11T09:00")
+    status, out, _ = agent("portal", SITE, "leave")
+    assert status == 0 and "A late fee applies." in out and records()[-1]["after_deadline"] is True
+
+
+def test_a_dated_choice_that_has_passed_is_refused(gym):
+    # The clock is Mar 10, 09:00: a slot earlier today and a stay that began yesterday have passed; a stay starting
+    # today and a slot later today haven't.
+    for slot in ("2026-03-10 08:00", "Mar 9-11"):
+        status, _, err = agent("portal", SITE, "book-slot", "--slot", slot)
+        assert status == 1 and "passed" in err
+    for slot in ("2026-03-10 18:00", "Mar 10-12"):
+        assert agent("portal", SITE, "book-slot", "--slot", slot)[0] == 0
+    assert [r["fields"]["slot"] for r in records()] == ["2026-03-10 18:00", "Mar 10-12"]

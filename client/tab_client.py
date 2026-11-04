@@ -29,7 +29,7 @@ def main(argv=None) -> int:
     # Only the commands that take standard input read it, as `tab` does: a shell driven through a pipe keeps stdin
     # open, and reading it for `tab status` would wait forever.
     takes_stdin = bool(argv) and (argv[0] in ("send", "write") or (argv[0] == "submit" and argv[1:2] in ([], ["-"]))
-                                  or argv == ["reply"])
+                                  or argv == ["reply"] or (argv[0] == "text" and len(argv) == 3))
     stdin = sys.stdin.buffer.read() if takes_stdin and sys.stdin is not None and not sys.stdin.isatty() else b""
     body = json.dumps({"token": token, "argv": argv, "stdin": base64.b64encode(stdin).decode("ascii")}).encode()
     request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
