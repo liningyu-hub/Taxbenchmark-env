@@ -6,7 +6,7 @@ Two personas are built from the drafts in `Day 1 Environment/`, which are read b
 - **S000005 Thomas Gonzalez:** California resident with wages, investments, a 72(t) IRA distribution and student-loan interest; 2025 Form 1040 and CA Form 540.
 - **S000007 Carlos Jones:** New York resident with wages, military drill pay, a partnership K-1 and an IRA conversion; 2025 Form 1040 and NY IT-201.
 
-All data is synthetic. Python 3.10+ with the standard library plus PyMuPDF, on Windows, macOS and Linux. It was ported from a Ruby prototype on 2026-11-03; the Ruby backup is `TaxAgentBench-Env.zip`, and the migration notes are at the end of this file.
+All data is synthetic. Python 3.10+ with the standard library plus PyMuPDF, on Windows, macOS and Linux. It began as a port of a Ruby prototype: `rubyisms.py` keeps that version's file formats, and private tests replay a saved run of it.
 
 How it is put together: [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -20,7 +20,7 @@ This repository holds the environment and its agent-facing configuration. **Ever
 | `personas/<id>/hidden/evaluation.json` | Each task's checks, event triggers, approval behaviour, traps and filing rules |
 | `personas/<id>/hidden/simulated_user.json` | The facts the persona answers questions from |
 | `tests/hidden/` | The tests that pin each task's grading |
-| `tests/golden/` | The saved Ruby run used by the replay tests |
+| `tests/golden/` | The saved prototype run used by the replay tests |
 | `internal/` | The scripted demo, review documents and the grading reference |
 
 The environment server merges `evaluation.json` into the public `persona.json` when it loads a persona. Agents reach the environment only through `tab`, which never returns either file.
@@ -223,7 +223,7 @@ runtime/current/
 runtime/archive/<run_id>/   earlier runs, moved here by reset or init --force
 ```
 
-JSON is laid out the way the Ruby version wrote it. Every relative path uses `/`, files are UTF-8 with `\n`, and the CLIs write UTF-8 whatever the console's code page. On Windows only, the run folder also holds lock files. `reset` archives the current run (nothing is deleted) and rebuilds the persona and task from their sources, then confirms the new workspace's fingerprint equals the previous run's.
+JSON is written in one fixed layout. Every relative path uses `/`, files are UTF-8 with `\n`, and the CLIs write UTF-8 whatever the console's code page. On Windows only, the run folder also holds lock files. `reset` archives the current run (nothing is deleted) and rebuilds the persona and task from their sources, then confirms the new workspace's fingerprint equals the previous run's.
 
 ## Tests
 
@@ -233,7 +233,7 @@ JSON is laid out the way the Ruby version wrote it. Every relative path uses `/`
 |---|---|
 | `test_environment.py`, `test_reset.py` | Building and resetting a workspace; render-time removal of test framing; leak scan |
 | `test_agent_tools.py`, `test_state.py` | The agent tools; path confinement (`..`, `C:\…`, UNC, junctions); the action log and its Windows lock; one command at a time per run; errors without host paths |
-| `test_key_and_cli.py`, `test_submission.py`, `test_persona.py`, `test_rubyisms.py` | The key check, the CLIs' UTF-8 output, submission parsing, the task template, Ruby-compatible formats |
+| `test_key_and_cli.py`, `test_submission.py`, `test_persona.py`, `test_rubyisms.py` | The key check, the CLIs' UTF-8 output, submission parsing, the task template, the fixed number and file formats |
 | `test_isolation.py` | The server and the client: same output as in-process, token required, operator commands refused, path confinement, stdin handling. A real container holding no private files (Docker only) |
 | `test_agent_sandbox.py` | The egress proxy; transcript parsing; the real-agent container sealed (Docker only) |
 | `test_portal.py` | Website actions on a synthetic site: listing, field validation against the clock, conditional rules, once-only actions, cancellation, receipts, logging of refused attempts, event triggers |
@@ -273,31 +273,3 @@ Scripted runs show that the environment and graders behave as intended. They are
 6. **E-filing is minimal:** one filing per run, no amended returns, no reject codes.
 7. **Real-agent runs have not been done yet.** They need a Claude login token.
 8. **Draft issues are fixed only at render time.** The drafts are never changed.
-
-## Migration from the Ruby version (2026-11-03)
-
-The Python version is a module-for-module port of the Ruby prototype, with the same commands, files and scoring. For the default `prepare` task, the agent sees three changes:
-- Test framing is removed in three rendered files.
-- `tab status` prints today's date on the simulated clock.
-- `tab help` lists the newer commands. In `prepare`, approval is never granted, so nothing can be filed.
-
-The saved Ruby run is replayed by private tests:
-- its workspace files render byte-identical, apart from the framing strip
-- its verification reports are equal apart from timestamps and one trap added later
-- its submission, JSON files and action log re-write byte for byte
-
-PDF text matches PDFKit word for word on every page. The word order is close but not identical (similarity 0.89 to 0.99).
-
-**What can't be reproduced exactly:**
-- the PDF text layout
-- Python's own error messages
-- the regex dialect in `tab search` (POSIX classes, non-ASCII case folding)
-- float formatting edges
-- run ids and timestamps
-- the task template, which is `{{placeholder}}` text instead of ERB
-
-**Behaviour differences:**
-- `\` is a path separator on every OS, and drive-letter and UNC paths are refused as outside the workspace.
-- Path checks compare real paths, case-insensitively on Windows.
-- On Windows the action log is locked through a sidecar file.
-- CRLF drafts stop `init` with a leak-scan error, as in Ruby.
