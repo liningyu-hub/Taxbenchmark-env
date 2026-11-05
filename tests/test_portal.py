@@ -159,3 +159,44 @@ def test_a_dated_choice_that_has_passed_is_refused(gym):
     for slot in ("2026-03-10 18:00", "Mar 10-12"):
         assert agent("portal", SITE, "book-slot", "--slot", slot)[0] == 0
     assert [r["fields"]["slot"] for r in records()] == ["2026-03-10 18:00", "Mar 10-12"]
+
+
+def test_a_rule_can_start_at_a_time(home, monkeypatch):
+    """A rule with "from" applies only once the clock reaches it (a site that closes at a known time)."""
+    site = {SITE: {"name": "Test Gym", "actions": {"book-court": {
+        "label": "Book a court", "description": "Book a court.",
+        "fields": {"court": {"type": "choice", "choices": ["A", "B"]}},
+        "rules": [{"from": "2026-03-11T09:00", "when": {"court": "A"}, "field": "court", "excludes": ["A"],
+                   "error": "Court A is closed."}],
+        "message": "Court {court} booked."}}}}
+    monkeypatch.setattr(Persona, "portals", property(lambda self: site))
+    real = Persona.task
+    monkeypatch.setattr(Persona, "task", lambda self, task_id=None: {
+        "id": "portaltest", "kind": "consumer", "start": "2026-03-10T09:00", "template": "task.md.tmpl"}
+        if task_id == "portaltest" else real(self, task_id))
+    environment.init(PERSONA, task_id="portaltest")
+    assert agent("portal", SITE, "book-court", "--court", "A")[0] == 0
+    agent("wait", "--until", "2026-03-11T09:00")
+    status, _, err = agent("portal", SITE, "book-court", "--court", "A")
+    assert status == 1 and "Court A is closed." in err
+    assert agent("portal", SITE, "book-court", "--court", "B")[0] == 0
+
+
+def test_an_action_can_generate_a_value(home, monkeypatch):
+    """"generates": {"pin": "digits:6"} gives each record a value derived from the run, site, action and record, and
+    the message can show it (a port-out PIN, a one-time code)."""
+    import hashlib
+    site = {SITE: {"name": "Test Gym", "actions": {"get-code": {
+        "label": "Get a code", "description": "A one-time code.", "generates": {"pin": "digits:6"},
+        "message": "Your code is {pin}."}}}}
+    monkeypatch.setattr(Persona, "portals", property(lambda self: site))
+    real = Persona.task
+    monkeypatch.setattr(Persona, "task", lambda self, task_id=None: {
+        "id": "portaltest", "kind": "consumer", "start": "2026-03-10T09:00", "template": "task.md.tmpl"}
+        if task_id == "portaltest" else real(self, task_id))
+    run = environment.init(PERSONA, task_id="portaltest")
+    status, out, _ = agent("portal", SITE, "get-code")
+    record = records()[-1]
+    seed = f"{run.run_id}|{SITE}|get-code|{record['id']}".encode("utf-8")
+    expected = f"{int(hashlib.sha256(seed).hexdigest(), 16) % 10 ** 6:06d}"
+    assert status == 0 and record["generated"] == {"pin": expected} and f"Your code is {expected}." in out

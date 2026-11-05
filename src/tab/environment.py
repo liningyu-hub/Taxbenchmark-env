@@ -46,11 +46,12 @@ def init(persona_id, force: bool = False, task_id=None) -> Run:
                             pending_dir=staging / "pending")
         report = renderer.build()
         if task.get("events"):
-            from .events import render_source
+            from .events import render_source, updated_pages
             folder = staging / "pending" / "events"
             folder.mkdir(parents=True)
             for event in task["events"]:
                 write_text(folder / f"{event['id']}.md", render_source(persona, event))
+                updated_pages(staging / "workspace", event)  # a page an event will change must match the drafts
             leaks = Renderer.leak_scan(folder)
             if leaks:
                 raise TabError("Leak scan failed: " + ", ".join(f"events/{l['file']} ({l['rule']})" for l in leaks))

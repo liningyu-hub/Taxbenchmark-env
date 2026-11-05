@@ -1,7 +1,9 @@
 """Shared fixtures and helpers (port of test/test_helper.rb).
 
 Tests that need the Day 1 drafts or the answer key skip themselves when those are missing, as the Ruby tests did.
-When TAB_DAY1_DIR is not set and a "Day 1 Environment" folder sits next to this project, the tests use it.
+Two versions of the drafts sit next to this project:
+  DRAFTS_DIR     the 2026-11-05 drafts, which the tests use when TAB_DAY1_DIR is not set
+  DRAFTS_V1_DIR  the first drafts (2026-11-03), used only by the Ruby replay (fixture drafts_v1, or TAB_DAY1_V1_DIR)
 """
 import os
 import shutil
@@ -11,9 +13,14 @@ import pytest
 
 from tab import ROOT
 
-SIBLING_DAY1 = ROOT.parent / "Day 1 Environment"
-if "TAB_DAY1_DIR" not in os.environ and SIBLING_DAY1.is_dir():
-    os.environ["TAB_DAY1_DIR"] = str(SIBLING_DAY1)
+DRAFTS_DIR = ROOT.parent / "Day 1 Environment-20261105T205710Z-1-001" / "Day 1 Environment"
+DRAFTS_V1_DIR = ROOT.parent / "Day 1 Environment"
+DAY1_FROM_ENV = "TAB_DAY1_DIR" in os.environ
+if not DAY1_FROM_ENV:
+    for candidate in (DRAFTS_DIR, DRAFTS_V1_DIR):
+        if candidate.is_dir():
+            os.environ["TAB_DAY1_DIR"] = str(candidate)
+            break
 
 PERSONA = "S000005"
 # The last run of the retired Ruby version (2026-11-03), kept as golden data. Git-ignored: it holds the answers.
@@ -36,6 +43,16 @@ def home(tmp_path, monkeypatch):
     h.mkdir()
     monkeypatch.setenv("TAB_HOME", str(h))
     return h
+
+
+@pytest.fixture
+def drafts_v1(monkeypatch):
+    """The first drafts (2026-11-03), for tests pinned to the Ruby run made from them."""
+    path = Path(os.environ.get("TAB_DAY1_V1_DIR") or DRAFTS_V1_DIR)
+    if not (path / "S000005_Thomas_Gonzalez").is_dir():
+        pytest.skip(f"the first drafts are not at {path} (set TAB_DAY1_V1_DIR)")
+    monkeypatch.setenv("TAB_DAY1_DIR", str(path))
+    return path
 
 
 @pytest.fixture(scope="session")

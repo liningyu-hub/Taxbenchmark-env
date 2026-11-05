@@ -389,7 +389,7 @@ def run_one(persona_id, task_id, args) -> int:
     run_id = f"{stamp.lower()}-{persona_id.lower()}-{task_id.lower()}-{secrets.token_hex(2)}"
     out = Path(args.out) if args.out else ROOT / "runtime" / "agent_runs" / f"{stamp}_{persona_id}_{task_id}"
     out.mkdir(parents=True, exist_ok=True)
-    sibling = ROOT.parent / "Day 1 Environment"
+    sibling = ROOT.parent / "Day 1 Environment-20261105T205710Z-1-001" / "Day 1 Environment"  # the 2026-11-05 drafts
     if "TAB_DAY1_DIR" not in os.environ and sibling.is_dir():
         os.environ["TAB_DAY1_DIR"] = str(sibling)
     os.environ["TAB_HOME"] = str(out / "home")

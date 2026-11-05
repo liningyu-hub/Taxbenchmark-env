@@ -14,10 +14,12 @@ nothing about grading lives there):
                              "starts": {"<choice>": DATE | DATETIME}}},   a choice that has started can't be taken
       "rules": [{"when": {"<field>": value}, "field": "<field>", "choices": [...]},       a narrower choice list
                 {"when": {...}, "field": "<field>", "excludes": [...], "error": "..."}],    a refusal
+                 a rule with "from": DATETIME applies only once the clock reaches it (a site that closes)
       "once": true,                              only while no earlier one is active
       "requires": ["<action>"],                  only after those actions are done (and not cancelled)
       "deadline": {"at": DATETIME, "after": "..."},   done at or after it: recorded "after_deadline", message shown
       "cancels": "<action>",                     takes --confirmation and cancels that earlier action
+      "generates": {"<name>": "digits:N"},        a value made for each record (a PIN), shown as {name}
       "message": "... {field} ...",              shown when done
       "receipt": {"from": "...", "subject": "...", "body": "... {field} {confirmation} ..."}}}}   an email
 Every attempt is logged by the CLI (refusals with ok: false). Done actions go to state.json "portal_actions" with their
@@ -25,6 +27,7 @@ simulated time and a confirmation number. Dates are checked against the simulate
 action (trigger type "action", tool "portal", args "^SITE ACTION"); graders read the records and the log.
 """
 import datetime as dt
+import hashlib
 import json
 import re
 from decimal import Decimal, InvalidOperation
@@ -91,6 +94,8 @@ class Portal:
             raise TabError(f"Missing --{missing[0]}. Run: tab portal {sid}")
         values = {n: self._value(n, fields[n], v, state.now) for n, v in given.items()}
         for rule in action.get("rules", []):
+            if rule.get("from") and state.data["now"] < rule["from"]:
+                continue
             if all(values.get(k) == v for k, v in rule.get("when", {}).items()) and rule["field"] in values:
                 value = values[rule["field"]]
                 chosen = value if isinstance(value, list) else [value]
@@ -117,6 +122,9 @@ class Portal:
         prefix = "".join(w[0] for w in sid.split("_") if w)[:4].upper()
         record = {"id": number, "at": state.data["now"], "site": sid, "action": aid, "fields": values,
                   "confirmation": f"{prefix}-{number:04d}"}
+        if action.get("generates"):
+            record["generated"] = {name: self._generate(spec, f"{self.run.run_id}|{sid}|{aid}|{number}")
+                                   for name, spec in action["generates"].items()}
         if target is not None:
             target["cancelled_at"] = state.data["now"]
             record["cancels"] = target["confirmation"]
@@ -225,8 +233,18 @@ class Portal:
         return raw
 
     @staticmethod
+    def _generate(spec: str, seed: str) -> str:
+        """A value for "generates": "digits:N" is N digits derived from the run, site, action and record."""
+        kind, _, size = spec.partition(":")
+        if kind != "digits" or not size.isdigit():
+            raise TabError(f"Unknown generated value {spec!r}")
+        n = int(size)
+        return f"{int(hashlib.sha256(seed.encode('utf-8')).hexdigest(), 16) % 10 ** n:0{n}d}"
+
+    @staticmethod
     def _fill(template, values, record) -> str:
         shown = {k: ", ".join(v) if isinstance(v, list) else v for k, v in values.items()}
+        shown.update(record.get("generated") or {})
         shown["confirmation"] = record["confirmation"]
         return re.sub(r"\{(\w+)\}", lambda m: str(shown.get(m.group(1), m.group(0))), template)
 

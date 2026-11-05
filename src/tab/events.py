@@ -5,7 +5,11 @@ A task lists its events:
    "trigger": {"type": "time", "after_start_hours": 24}
             | {"type": "email_sent", "to": ADDRESS, "attaches": PATH, "not_attaches": PATH,
                "attachment": REGEX, "no_attachment": REGEX, "unless_fired": [ids], "requires_fired": [ids]}
-            | {"type": "action", "tool": TOOL, "args": REGEX}}
+            | {"type": "action", "tool": TOOL, "args": REGEX},
+   "page_updates": [{"path": WORKSPACE_PATH, "replace": [[OLD, NEW], ...]}],   a site page that changes when the
+                                                                              event is delivered (checked at init)
+   "cancels_portal": [{"site": SITE, "action": ACTION, "fields": {...}}]}     the site cancels the agent's matching
+                                                                              records then (a closed campground)
 After every successful agent command the engine fires each event whose trigger matches, once. An event with a delay is
 scheduled and delivered when the clock passes its time. "attaches"/"not_attaches" name a workspace document: an
 attachment counts when its bytes are that document's (so a renamed exact copy counts, and a different file with a
@@ -17,7 +21,7 @@ Email/ like any arrival.
 import datetime as dt
 import re
 
-from . import clock
+from . import TabError, clock
 from .renderer import Renderer
 from .run import read_text
 from .timeline import deliver
@@ -108,6 +112,7 @@ class Engine:
         return False
 
     def _fire(self, event, when: dt.datetime, state, delivered: list) -> None:
+        pages = updated_pages(self.run.workspace, event)  # first: a page that doesn't match changes nothing
         text = read_text(self.run.path("pending", "events", f"{event['id']}.md"))
         text = _DATE_PLACEHOLDER.sub(lambda m: m.group(1) + clock.format_email_date(when.date()), text)
         name = Renderer.email_name(f"{when.date().isoformat()}_event.md", text)
@@ -119,6 +124,13 @@ class Engine:
         sent = sum(1 for _ in open(outbox, "rb")) if outbox.is_file() else 0
         state["fired_at"][event["id"]] = {"at": when.strftime("%Y-%m-%dT%H:%M"), "path": path, "emails_sent": sent}
         delivered.append(path)
+        for page_path, page in pages:  # delivered like an arrival, so the integrity check expects the new page
+            deliver(self.run, page_path, page, state)
+        stamp = when.strftime("%Y-%m-%dT%H:%M")
+        for spec in event.get("cancels_portal") or []:
+            for record in state["portal_actions"]:
+                if (record["site"], record["action"]) == (spec["site"], spec["action"])                         and not record.get("cancelled_at")                         and all(record["fields"].get(k) == v for k, v in (spec.get("fields") or {}).items()):
+                    record["cancelled_at"], record["cancelled_by"] = stamp, event["id"]
 
 
 def render_source(persona, event) -> str:
@@ -128,6 +140,22 @@ def render_source(persona, event) -> str:
         from . import TabError
         raise TabError(f"Missing event draft for {event['id']}: {source.as_posix()}")
     return _RELEASE_LINE.sub("", Renderer.clean_markdown(read_text(source)))
+
+
+def updated_pages(workspace, event) -> list:
+    """The pages an event changes, as (path, new text): each OLD text must occur exactly once on its page, or the
+    drafts don't match the task's events (checked at init too)."""
+    out = []
+    for update in event.get("page_updates") or []:
+        target = workspace / update["path"]
+        page = read_text(target) if target.is_file() else ""
+        for old, new in update["replace"]:
+            if page.count(old) != 1:
+                raise TabError(f"Event {event['id']}: {old!r} must occur once in {update['path']}; these drafts "
+                               "don't match the task's events (check TAB_DAY1_DIR).")
+            page = page.replace(old, new)
+        out.append((update["path"], page))
+    return out
 
 
 def unique_path(workspace, rel: str) -> str:

@@ -2,11 +2,12 @@
 
   tab calendar                                   list the entries, with ids
   tab calendar add --date D [--end D] [--time HH:MM] [--until HH:MM] --title TEXT
-  tab calendar remove --id ID
+  tab calendar remove --id ID [--date D]       remove an entry, or one date of a recurring entry
 
 The calendar starts as the drafted calendar file (persona.json "calendar", a workspace path): each row of its
 "| Date | Event |" table is an entry. Dates like "2026-03-13 → 03-15", "2026-03-14 10:00", "2026-03-21 09:00–13:00"
-or "2026-03-06" are parsed; any other date text ("Fridays in Lent 18:00") is kept as written, undated. The entries,
+or "2026-03-06" are parsed; any other date text ("Fridays in Lent 18:00") is kept as written, undated: a recurring
+entry, which can skip single dates ("except"). The entries,
 with every addition and removal and its simulated time, live in state.json "calendar". After each change the
 environment re-renders the workspace file (logged and recorded as a release, so integrity stays clean).
 """
@@ -22,6 +23,7 @@ _RANGE = re.compile(r"^(\d{4})-(\d{2}-\d{2})\s*→\s*(?:(\d{4})-)?(\d{2}-\d{2})$
 _TIMED = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2})(?:\s*[–-]\s*(\d{1,2}:\d{2}))?$")
 _DAY = re.compile(r"^(\d{4}-\d{2}-\d{2})$")
 _TIME = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d$")
+_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
 def parse_when(text: str) -> dict:
@@ -39,7 +41,8 @@ def parse_when(text: str) -> dict:
 
 def describe(e: dict) -> str:
     if not e.get("date"):
-        return e["when"]
+        skipped = e.get("except") or []
+        return e["when"] + (f" (not on {', '.join(skipped)})" if skipped else "")
     if e.get("end"):
         return f"{e['date']} → {e['end']}"
     if e.get("time"):
@@ -89,7 +92,7 @@ class Agenda:
         if cmd == "remove":
             return self._remove(state, entries, opts)
         raise TabError("Usage: tab calendar | tab calendar add --date D [--end D] [--time HH:MM] [--until HH:MM] "
-                       "--title TEXT | tab calendar remove --id ID")
+                       "--title TEXT | tab calendar remove --id ID [--date D]")
 
     @staticmethod
     def _options(args) -> dict:
@@ -128,9 +131,29 @@ class Agenda:
                                                                      "title": title}
 
     def _remove(self, state, entries, opts):
+        unknown = set(opts) - {"id", "date"}
+        if unknown:
+            raise TabError(f"Unknown option --{sorted(unknown)[0]}")
         entry = next((e for e in entries if e["id"] == opts.get("id")), None)
         if entry is None or entry.get("removed_at"):
             raise TabError(f"No calendar entry {opts.get('id')!r}. Run: tab calendar")
+        if "date" in opts:  # one date of a recurring entry
+            if entry.get("date"):
+                raise TabError(f"Only a recurring entry can skip a date; {entry['id']} is on {describe(entry)}. "
+                               f"To remove it: tab calendar remove --id {entry['id']}")
+            day = self._date(opts["date"], "date")
+            weekday = dt.date.fromisoformat(day).weekday()
+            named = [i for i, name in enumerate(_WEEKDAYS) if re.search(rf"\b{name}s?\b", entry["when"], re.I)]
+            if named and weekday not in named:  # "Fridays in Lent": only a Friday can be skipped
+                on = " or ".join(f"{_WEEKDAYS[i].capitalize()}s" for i in named)
+                raise TabError(f"{entry['id']} is on {on}; {day} is a {_WEEKDAYS[weekday].capitalize()}.")
+            if day in (entry.get("except") or []):
+                raise TabError(f"{entry['id']} already skips {day}.")
+            entry["except"] = sorted((entry.get("except") or []) + [day])
+            self._render(state, entries)
+            state.save()
+            return f"{entry['id']} now skips {day}: {describe(entry)}  {entry['title']}", {"id": entry["id"],
+                                                                                           "skipped": day}
         entry["removed_at"] = state.data["now"]
         self._render(state, entries)
         state.save()

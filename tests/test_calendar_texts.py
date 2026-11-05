@@ -70,3 +70,42 @@ def test_texts_go_to_known_contacts_and_are_kept(run):
     sent = (run.workspace / "Texts/Sent.md").read_text("utf-8")
     assert "See you on the 17th." in sent and "Bringing the stove." in sent
     assert Run.current().integrity()["clean"]
+
+
+def with_weekly_choir(run):
+    """Adds a recurring row to the drafted calendar before its first use (Thomas's drafts have none)."""
+    path = run.workspace / CAL
+    path.write_bytes(path.read_bytes() + "| Tuesdays 19:00 | Choir practice |\n".encode("utf-8"))
+    return next(l.split()[0] for l in agent("calendar")[1].splitlines()[1:] if "Choir" in l)
+
+
+def test_remove_one_date_of_a_recurring_entry(run):
+    choir = with_weekly_choir(run)
+    status, out, _ = agent("calendar", "remove", "--id", choir, "--date", "2026-03-24")
+    assert status == 0 and "2026-03-24" in out
+    assert next(e for e in entries() if e["id"] == choir)["except"] == ["2026-03-24"]
+    assert "Tuesdays 19:00 (not on 2026-03-24)" in agent("calendar")[1]
+    assert "| Tuesdays 19:00 (not on 2026-03-24) | Choir practice |" in (run.workspace / CAL).read_text("utf-8")
+
+
+def test_removing_a_date_needs_a_recurring_entry(run):
+    dentist = next(l.split()[0] for l in agent("calendar")[1].splitlines()[1:] if "Dentist" in l)
+    status, _, err = agent("calendar", "remove", "--id", dentist, "--date", "2026-03-05")
+    assert status == 1 and "Only a recurring entry" in err
+    assert not next(e for e in entries() if e["id"] == dentist).get("removed_at")
+
+
+def test_removing_a_date_twice_is_refused(run):
+    choir = with_weekly_choir(run)
+    assert agent("calendar", "remove", "--id", choir, "--date", "2026-03-24")[0] == 0
+    status, _, err = agent("calendar", "remove", "--id", choir, "--date", "2026-03-24")
+    assert status == 1 and "already" in err
+    assert agent("calendar", "remove", "--id", choir, "--date", "March 31")[0] == 1
+    assert next(e for e in entries() if e["id"] == choir)["except"] == ["2026-03-24"]
+
+
+def test_a_date_that_isnt_an_occurrence_is_refused(run):
+    choir = with_weekly_choir(run)  # Tuesdays
+    status, _, err = agent("calendar", "remove", "--id", choir, "--date", "2026-03-26")  # a Thursday
+    assert status == 1 and "Tuesday" in err and "Thursday" in err
+    assert not next(e for e in entries() if e["id"] == choir).get("except")

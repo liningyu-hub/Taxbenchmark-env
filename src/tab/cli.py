@@ -30,7 +30,7 @@ AGENT_HELP = """tab: tools for working in the tax environment
   tab reply "MESSAGE" | tab reply < FILE   send a message to the person you work for (an answer, a summary)
   tab write PATH < FILE     save standard input to PATH (only under the work folder)
   tab copy PATH DEST        copy a file (PDFs too) into the work folder; DEST ending in / keeps the name
-  tab calendar [add --date D [--end D] [--time HH:MM] [--until HH:MM] --title TEXT | remove --id ID]
+  tab calendar [add --date D [--end D] [--time HH:MM] [--until HH:MM] --title TEXT | remove --id ID [--date D]]
                             show the calendar, or add or remove an entry
   tab text --to NAME "MESSAGE" | tab text --to NAME < FILE   send a text message
   tab portal [SITE [ACTION --field VALUE ...]]   use a website: list sites, show a site's actions, do one

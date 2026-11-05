@@ -168,6 +168,11 @@
       "start": "2026-03-10T09:00",
       "template": "task_C3.md.tmpl"
     },
+    "C4": {
+      "kind": "consumer",
+      "start": "2026-02-09T09:00",
+      "template": "task_C4.md.tmpl"
+    },
     "T3": {
       "kind": "tax",
       "start": "2026-03-16T09:00",
@@ -351,8 +356,8 @@
           "message": "Label requested for {asset} ({method} on {date})."
         },
         "update-ticket": {
-          "label": "Update ticket",
-          "description": "Add a note to an open IT ticket.",
+          "label": "Add reply",
+          "description": "Reply on helpdesk ticket IT-5520.",
           "fields": {
             "ticket": {
               "type": "choice",
@@ -364,7 +369,7 @@
               "type": "text"
             }
           },
-          "message": "Note added to {ticket}."
+          "message": "Reply added to {ticket}."
         }
       }
     },
@@ -418,8 +423,10 @@
               "choices": [
                 "2",
                 "4",
+                "7",
                 "9",
-                "11"
+                "11",
+                "15"
               ]
             }
           },
@@ -433,7 +440,35 @@
                 "Apr 17-19",
                 "Apr 24-26"
               ],
-              "error": "Boulder Flats is closed through April 30."
+              "error": "Boulder Flats is closed through April 30.",
+              "from": "2026-03-04T09:00"
+            },
+            {
+              "when": {
+                "campground": "Boulder Flats",
+                "weekend": "Apr 17-19"
+              },
+              "field": "site",
+              "excludes": [
+                "2",
+                "4",
+                "7",
+                "9",
+                "11",
+                "15"
+              ],
+              "error": "Site 22 is already your reservation that weekend; no other Boulder Flats sites are open."
+            },
+            {
+              "when": {
+                "campground": "Boulder Flats",
+                "weekend": "Apr 24-26"
+              },
+              "field": "site",
+              "choices": [
+                "7",
+                "15"
+              ]
             },
             {
               "when": {
@@ -466,8 +501,10 @@
               "excludes": [
                 "2",
                 "4",
+                "7",
                 "9",
-                "11"
+                "11",
+                "15"
               ],
               "error": "Cholla Ridge is full that weekend."
             },
@@ -494,6 +531,39 @@
           "description": "Cancel a reservation you made here.",
           "cancels": "book",
           "message": "Reservation cancelled and refunded."
+        }
+      }
+    },
+    "Sierra_Wireless": {
+      "name": "Sierra Wireless",
+      "actions": {
+        "change-plan": {
+          "label": "Change plan",
+          "description": "Switch 626-555-0100 to another Sierra plan.",
+          "fields": {
+            "plan": {
+              "type": "choice",
+              "choices": [
+                "5 GB, $45/month"
+              ]
+            }
+          },
+          "once": true,
+          "message": "Your plan is now {plan}, from your next bill."
+        },
+        "request-port-out-pin": {
+          "label": "Request port-out PIN",
+          "description": "Account > Security: the PIN a new carrier needs to move 626-555-0100.",
+          "generates": {
+            "pin": "digits:6"
+          },
+          "message": "Your port-out PIN is {pin}. Give it to your new carrier to keep 626-555-0100."
+        },
+        "cancel-service": {
+          "label": "Cancel service",
+          "description": "End Sierra service for 626-555-0100.",
+          "once": true,
+          "message": "Service for 626-555-0100 is cancelled. The number will be released."
         }
       }
     }

@@ -26,7 +26,7 @@
     {
       "doc": "DOC1",
       "source": "00_TaxBench_Source/Reference Files/DOC1_W-2.pdf",
-      "place": "Portals/Horizon_Foods_Payroll_MyADP/Pay/Tax_Statements/2025_Form_W-2.pdf",
+      "place": "Portals/Horizon_Foods_Payroll/Pay/Tax_Statements/2025_Form_W-2.pdf",
       "expect_text": [
         "Horizon Foods Group",
         "W-2"
@@ -159,6 +159,11 @@
       "kind": "consumer",
       "start": "2026-03-02T09:00",
       "template": "task_C3.md.tmpl"
+    },
+    "C4": {
+      "kind": "consumer",
+      "start": "2026-02-09T09:00",
+      "template": "task_C4.md.tmpl"
     },
     "K4": {
       "kind": "advice",

@@ -50,6 +50,17 @@ def test_config_defaults_and_overrides(monkeypatch, tmp_path):
     assert config.day1_dir().name == "Day 1 Environment" and config.day1_dir().parent.name == "Downloads"
 
 
+def test_default_drafts_are_the_new_version():
+    """Without TAB_DAY1_DIR, the tests use the 2026-11-05 drafts next to the project (the old ones serve only the
+    Ruby replay)."""
+    import conftest
+    from tab import ROOT
+    new = ROOT.parent / "Day 1 Environment-20261105T205710Z-1-001" / "Day 1 Environment"
+    if not new.is_dir() or getattr(conftest, "DAY1_FROM_ENV", False):
+        pytest.skip("the 2026-11-05 drafts aren't next to the project, or TAB_DAY1_DIR was set")
+    assert config.day1_dir() == new.resolve()
+
+
 def test_pdf_text_reads_every_page():
     p = Persona.load("S000005")
     doc = next(d for d in p.tax_documents if d["doc"] == "DOC5")

@@ -11,7 +11,10 @@ from .rubyisms import ruby_regex
 class SimUser:
     def __init__(self, data: dict, task: dict = None):
         self.facts = [f for f in data["facts"] if task is None or self._applies(f, task)]
-        self.default = data["default"]
+        # "task_default" answers what no fact covers in the Task_Scope tasks; "default" stays for `prepare` (the
+        # original task, whose answers the Ruby version fixed).
+        in_task = task is not None and task.get("id") != "prepare"
+        self.default = data.get("task_default") if in_task and data.get("task_default") else data["default"]
 
     @staticmethod
     def _applies(fact: dict, task: dict) -> bool:
