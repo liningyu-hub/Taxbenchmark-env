@@ -138,3 +138,50 @@ def test_commands_hold_the_run_while_they_change_it(initialized_env, monkeypatch
         t.join()
     assert statuses == [0, 0, 0]
     assert initialized_env.state().data["now"] == "2026-03-20T12:00"
+
+
+# -- Build Guide 1.4: a payment shows on the bank's site ------------------------------------------------------------
+
+ACTIVITY = "Portals/Larkspur_Savings_Bank/2026_Activity.md"
+
+
+def test_a_payment_adds_a_line_to_the_bank_activity_page(home):
+    from tab import environment
+    from tab.run import Run
+    run = environment.init("S000005", task_id="C3")
+    assert not (run.workspace / ACTIVITY).exists()
+    assert agent("pay", "--to", "Arroyo Medical Group", "--amount", "185", "--from", "0000384471")[0] == 0
+    assert agent("pay", "--to", "Arroyo Medical Group", "--amount", "20", "--from", "0000384471")[0] == 0
+    rows = [l for l in (run.workspace / ACTIVITY).read_text("utf-8").splitlines() if l.startswith("| 2026-")]
+    assert len(rows) == 2 and "-$185.00" in rows[0] and "-$20.00" in rows[1]
+    assert "Arroyo Medical Group" in rows[0] and "P0001" in rows[0] and "P0002" in rows[1]
+    assert Run.current().integrity()["clean"]
+
+
+def test_an_account_without_an_activity_page_writes_none(home, monkeypatch):
+    from tab import environment
+    from tab.persona import Persona
+    real = Persona.accounts.fget
+    monkeypatch.setattr(Persona, "accounts", property(
+        lambda self: {k: {f: v for f, v in a.items() if f != "activity_page"} for k, a in real(self).items()}))
+    run = environment.init("S000005", task_id="C3")
+    assert agent("pay", "--to", "Arroyo Medical Group", "--amount", "185", "--from", "0000384471")[0] == 0
+    assert not (run.workspace / ACTIVITY).exists()
+
+
+def test_a_payment_confirms_by_email(home):
+    from tab import environment
+    run = environment.init("S000005", task_id="C3")
+    status, out, _ = agent("pay", "--to", "Arroyo Medical Group", "--amount", "185", "--from", "0000384471")
+    path = next(l.split(": ", 1)[1] for l in out.splitlines() if l.startswith("New email: "))
+    text = (run.workspace / path).read_text("utf-8")
+    assert status == 0 and "$185.00" in text and "Arroyo Medical Group" in text and "P0001" in text
+
+
+def test_a_refused_payment_sends_no_email(home):
+    from tab import environment
+    run = environment.init("S000005", task_id="C3")
+    before = sorted(p.name for p in (run.workspace / "Email").iterdir())
+    status, out, err = agent("pay", "--to", "IRS", "--amount", "10", "--from", "0000384471")  # not approved
+    assert status == 1 and "New email" not in out + err
+    assert sorted(p.name for p in (run.workspace / "Email").iterdir()) == before

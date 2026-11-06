@@ -30,7 +30,8 @@
       "expect_text": [
         "Horizon Foods Group",
         "W-2"
-      ]
+      ],
+      "available_from": "2026-01-26"
     },
     {
       "doc": "DOC2",
@@ -39,7 +40,8 @@
       "expect_text": [
         "Defense Finance and Accounting Service",
         "W-2"
-      ]
+      ],
+      "available_from": "2026-01-14"
     },
     {
       "doc": "DOC3",
@@ -48,7 +50,12 @@
       "expect_text": [
         "Eastgate Securities",
         "1099-B"
-      ]
+      ],
+      "available_from": "2026-02-16",
+      "page_line": {
+        "path": "Portals/Eastgate_Securities/2025_Realized_Sales.md",
+        "text": "Tax form: 1099-B in Documents > Tax Center."
+      }
     },
     {
       "doc": "DOC4",
@@ -57,7 +64,12 @@
       "expect_text": [
         "Marlowe Trust Company",
         "1099-R"
-      ]
+      ],
+      "available_from": "2026-01-29",
+      "page_line": {
+        "path": "Portals/Marlowe_Trust_Company/2025_IRA_and_Roth_Activity.md",
+        "text": "Tax form: 2025 Form 1099-R under Documents."
+      }
     },
     {
       "doc": "DOC5",
@@ -76,7 +88,8 @@
       "expect_text": [
         "Willowbend Loan Servicing",
         "1098-E"
-      ]
+      ],
+      "available_from": "2026-01-22"
     }
   ],
   "expert_return": "00_TaxBench_Source/Final Return/S000007_Carlos_Jones_FedNY_2025.pdf",
@@ -87,7 +100,8 @@
     "elmstead_checking": {
       "name": "Elmstead Credit Union checking",
       "routing": "221000999",
-      "number": "0000712260"
+      "number": "0000712260",
+      "activity_page": "Portals/Elmstead_Credit_Union/2026_Activity.md"
     }
   },
   "payees": {
@@ -373,7 +387,12 @@
           "label": "Cancel appointment",
           "description": "Cancel a booked appointment.",
           "cancels": "book",
-          "message": "Appointment cancelled."
+          "message": "Appointment cancelled.",
+          "receipt": {
+            "from": "Capital Arden Service <service@capitalarden.example.com>",
+            "subject": "Appointment cancelled",
+            "body": "Your service appointment was cancelled.\n\nCapital Arden Service"
+          }
         }
       }
     },
@@ -402,7 +421,12 @@
               "max": "today"
             }
           },
-          "message": "Basis saved for {lot}: {basis}, acquired {acquired}."
+          "message": "Basis saved for {lot}: {basis}, acquired {acquired}.",
+          "receipt": {
+            "from": "Eastgate Securities <statements@eastgate.example.com>",
+            "subject": "Cost basis saved",
+            "body": "Cost basis saved for {lot}: {basis}, acquired {acquired}.\n\nEastgate Securities"
+          }
         }
       }
     },
@@ -425,7 +449,12 @@
             "at": "2026-03-11T00:00",
             "after": "Cancelled within 48 hours of arrival: one night has been charged."
           },
-          "message": "Booking {booking} cancelled."
+          "message": "Booking {booking} cancelled.",
+          "receipt": {
+            "from": "Lakeview Inn <stay@lakeviewinn.example.com>",
+            "subject": "Booking {booking} cancelled",
+            "body": "Your booking {booking} is cancelled.\n\nLakeview Inn"
+          }
         },
         "book": {
           "label": "Book a room",
@@ -457,7 +486,12 @@
           "label": "Give consent",
           "description": "Consent to retrieve your federal tax information directly from the IRS (fills in the 2024 tax data).",
           "once": true,
-          "message": "Consent recorded. Your 2024 federal tax information will be filled in from the IRS."
+          "message": "Consent recorded. Your 2024 federal tax information will be filled in from the IRS.",
+          "receipt": {
+            "from": "Federal Student Aid <noreply@studentaid.example.gov>",
+            "subject": "Consent provided for the FAFSA form",
+            "body": "You gave consent to retrieve your federal tax information from the IRS for Jin T. Jones's 2026–27 FAFSA form.\n\nFederal Student Aid"
+          }
         },
         "household": {
           "label": "Household",

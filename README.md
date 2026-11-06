@@ -122,7 +122,7 @@ Commands run one at a time per run, by the server and in-process alike. Each tak
 
 | Command | What it does |
 |---|---|
-| `tab task` | The task |
+| `tab task` | The task, then any messages the person has sent since (a daily task's morning instruction) |
 | `tab status` | Run id, persona, today's date on the simulated clock, submissions so far |
 | `tab ls [PATH]`, `tab tree` | Browse the workspace (`Email`, `Portals`, `Documents`, `Calendar`, `Texts`, and `Sent` once mail is sent) |
 | `tab read PATH [--page N]` | Read a file; PDFs come back as text |
@@ -152,7 +152,7 @@ Commands run one at a time per run, by the server and in-process alike. Each tak
 Each task starts at its own date and time, and `tab status` shows it. What exists in the persona's world by then is visible. What is dated later waits outside the workspace until the clock reaches it:
 - emails, by the date in their file name
 - text-message blocks, by their `· M/D/YYYY` stamp (the texts file is re-rendered as blocks arrive)
-- tax forms marked `available_from`, such as an attachment that arrives with a later email
+- tax forms marked `available_from`: each site form appears on its notice email's date, and the site page's "your form is available" line (`page_line`) appears with it; an attachment arrives with its email
 
 Undated files and calendars are always visible. Every agent tool sees the same world, so a withheld item can't be listed, read, searched or attached.
 
@@ -170,7 +170,7 @@ These are explicit state transitions, recorded in the run's `state.json`. A refu
 1. **Submit** the return (`tab submit`).
 2. **`tab request-approval "SUMMARY"`** shows the persona the latest submission. What the persona agrees to depends on the task. Approval applies to that submission only.
 3. **`tab efile`** files the latest submission. It is accepted only if the persona approved that same submission and every required line is given. Otherwise it is rejected, with every reason listed. Acceptance gives a confirmation number per return and an acceptance email. Filing twice is refused. E-file checks completeness, never correctness: a real e-file system can't know the right answers, and checking them would leak the key.
-4. **`tab pay --to PAYEE --amount N --from ACCOUNT`** needs a known payee and a known account, given by its account number. Paying a tax agency also needs the persona's approval to pay and that return filed. Payments go to `state.json` and `payments.jsonl`.
+4. **`tab pay --to PAYEE --amount N --from ACCOUNT`** needs a known payee and a known account, given by its account number. Paying a tax agency also needs the persona's approval to pay and that return filed. Payments go to `state.json` and `payments.jsonl`, and each sends a confirmation email and adds a row to the bank's activity page on its site (the account's `activity_page`).
 
 ## Grading (`tab-admin verify`)
 
@@ -261,7 +261,7 @@ Scripted runs show that the environment and graders behave as intended. They are
 | Graders: tax lines plus workflow; per-task checks | **Implemented** |
 | Action log, submissions, results, integrity, reset with archive | **Implemented** |
 | Email | **Stand-in:** Markdown files, `tab inbox` and `tab send`; no mail server |
-| Website portals | **Stand-in:** folders of Markdown pages and PDFs, plus declared actions (`tab portal`) for their buttons; no web UI, logins or 2FA. Pages don't change after an action; the confirmation and any receipt email do |
+| Website portals | **Stand-in:** folders of Markdown pages and PDFs, plus declared actions (`tab portal`) for their buttons; no web UI, logins or 2FA. Pages don't change after an action (an event can change one, such as a closure); bookings, cancellations, changes, submissions and payments confirm by email (the gym cancellation and the laptop label by their drafted replies); a form step such as saving a section doesn't |
 | Browser | **Stand-in:** `tab open` serves only known pages and logs every link |
 | Simulated user | **Stand-in:** keyword rules over case facts, not a language model |
 | E-file | **Stand-in:** completeness check, confirmation numbers and an acceptance email; no agency reject codes |

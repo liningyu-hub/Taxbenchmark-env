@@ -20,6 +20,7 @@ from decimal import Decimal
 from . import TabError, clock
 from .renderer import Renderer
 from .rubyisms import json_compact, ruby_strip, to_s
+from .run import read_text
 from .timeline import deliver
 
 NO_POLICY_REPLY = "Thanks, but please don't file or pay anything for now. Just get everything ready."
@@ -143,10 +144,29 @@ class Workflow:
         state["payments"].append(record)
         with open(self.run.path("payments.jsonl"), "ab") as f:
             f.write((json_compact(record) + "\n").encode("utf-8"))
+        self._post_to_activity(acct, record, p, state)
+        email = self._payment_email(state, record, p.get("name", payee_id), acct)
         state.save()
         return (f"Paid ${value:,.2f} to {p.get('name', payee_id)} from {acct['name']} "
-                f"(account ending {acct['number'][-4:]}). Confirmation {record['confirmation']}.",
+                f"(account ending {acct['number'][-4:]}). Confirmation {record['confirmation']}.\n"
+                f"New email: {email}",
                 {"payment_id": record["id"], "payee": payee_id, "amount": record["amount"], "from": account_id})
+
+    def _payment_email(self, state, record, payee_name, acct) -> str:
+        """A payment confirms by email (Build Guide 1.3), in the style of the e-file acceptance email."""
+        day = state.now.date()
+        name = self.persona.name
+        subject = f"Payment confirmation: {payee_name}"
+        text = "\n".join([f"# {subject}", "", "**From:** Payment Center <notices@payment-center.example.com>  ",
+                          f"**To:** {name} <{self.persona.data.get('email', '')}>  ",
+                          f"**Date:** {clock.format_email_date(day)}  ", f"**Subject:** {subject}  ", "",
+                          f"Your payment of ${record['amount']:,.2f} to {payee_name} from {acct['name']} (account "
+                          f"ending {acct['number'][-4:]}) was received on {clock.format_email_date(day)}. "
+                          f"Confirmation {record['confirmation']}.", "", "Payment Center", ""])
+        from .events import unique_path
+        path = unique_path(self.run.workspace, "Email/" + Renderer.email_name(f"{day.isoformat()}_payment.md", text))
+        deliver(self.run, path, text, state)
+        return path
 
     # -- helpers -------------------------------------------------------------------------------------------------
 
@@ -177,6 +197,19 @@ class Workflow:
                 return pid, p
         known = ", ".join(self.persona.payees) or "none"
         raise TabError(f"Unknown payee {json.dumps(to_s(text))}. Payees set up for bill pay: {known}.")
+
+    def _post_to_activity(self, acct, record, payee, state) -> None:
+        """A payment shows on the bank's site (Build Guide 1.4): one row on the account's "activity_page", created
+        by the first payment. Delivered like an arrival, so the integrity check expects the page."""
+        path = acct.get("activity_page")
+        if not path:
+            return
+        target = self.run.workspace / path
+        page = read_text(target) if target.is_file() else (
+            f"# {acct['name']}: activity, {state.now.year}\n\n| Date | Description | Amount |\n| --- | --- | --- |\n")
+        row = (f"| {state.now.date().isoformat()} | Payment to {payee.get('name', record['payee'])} · confirmation "
+               f"{record['confirmation']} | -${record['amount']:,.2f} |\n")
+        deliver(self.run, path, page + row, state, log=True)
 
     def _account(self, text):
         digits = re.sub(r"\D", "", to_s(text)).lstrip("0")

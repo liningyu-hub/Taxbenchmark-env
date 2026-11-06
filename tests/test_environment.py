@@ -89,3 +89,78 @@ def test_crlf_drafts_fail_the_leak_scan(home, tmp_path, monkeypatch, persona):
     with pytest.raises(TabError, match="Leak scan failed"):
         environment.init(PERSONA)
     assert not Run.exists()
+
+
+# -- Build Guide 1.5: a site's tax form appears on its notice date, with the page's "form is available" line -------
+
+BEACON_PAGE = "Portals/Beacon_Securities/2025_Activity.md"
+BEACON_LINE = "Tax form: 1099-DIV available in Documents > Tax Center."
+
+
+def test_forms_wait_for_their_notice_dates(home, persona):
+    from conftest import agent
+    run = environment.init(PERSONA, task_id="T4")  # Jan 9: before every notice date
+    assert not [d for d in persona.tax_documents if (run.workspace / d["place"]).exists()]
+    assert BEACON_LINE not in (run.workspace / BEACON_PAGE).read_text("utf-8")
+    agent("wait", "--until", "2026-02-13")
+    beacon = next(d for d in persona.tax_documents if d["place"].startswith("Portals/Beacon_Securities/"))
+    horizon = next(d for d in persona.tax_documents if d["place"].startswith("Portals/Horizon_Securities/"))
+    assert (run.workspace / beacon["place"]).is_file() and BEACON_LINE in (run.workspace / BEACON_PAGE).read_text("utf-8")
+    assert not (run.workspace / horizon["place"]).exists()  # its notice is Feb 18
+    assert Run.current().integrity()["clean"]
+
+
+def test_all_forms_present_for_the_prepare_task(home, persona):
+    run = environment.init(PERSONA)  # Mar 20
+    for doc in persona.tax_documents:
+        assert (run.workspace / doc["place"]).is_file(), doc["doc"]
+        line = doc.get("page_line")
+        assert line is None or line["text"] in (run.workspace / line["path"]).read_text("utf-8"), doc["doc"]
+    assert any(d.get("page_line") for d in persona.tax_documents)
+
+
+def test_a_missing_page_line_fails_the_build(home, persona, monkeypatch):
+    from tab.persona import Persona
+    real = Persona.tax_documents.fget
+
+    def docs(self):
+        out = [dict(d) for d in real(self)]
+        out[2] = dict(out[2], available_from="2026-02-13",
+                      page_line={"path": BEACON_PAGE, "text": "No such line on this page."})
+        return out
+    monkeypatch.setattr(Persona, "tax_documents", property(docs))
+    with pytest.raises(TabError, match=out_doc_id(persona)):
+        environment.init(PERSONA, task_id="T4")
+
+
+def out_doc_id(persona):
+    return persona.tax_documents[2]["doc"]
+
+
+def test_two_withheld_lines_on_one_page_are_refused(home, persona, monkeypatch):
+    """A page can hide one form's line: releasing two from one snapshot would lose or misplace one."""
+    from tab.persona import Persona
+    real = Persona.tax_documents.fget
+    crescent = next(i for i, d in enumerate(real(persona)) if d["place"].startswith("Portals/Crescent_Investments/"))
+
+    def docs(self):
+        out = [dict(d) for d in real(self)]
+        out[crescent] = dict(out[crescent], page_line={"path": BEACON_PAGE, "text": BEACON_LINE})
+        return out
+    monkeypatch.setattr(Persona, "tax_documents", property(docs))
+    with pytest.raises(TabError, match="already hides"):
+        environment.init(PERSONA, task_id="T4")
+
+
+def test_an_event_changing_a_page_with_a_hidden_line_is_refused(home, monkeypatch):
+    """An event's page change would be undone when the hidden line is released, so the build refuses the pair."""
+    from tab.persona import Persona
+    real = Persona.task
+    monkeypatch.setattr(Persona, "task", lambda self, task_id=None: {
+        "id": "pagetest", "kind": "consumer", "start": "2026-01-09T09:00", "template": "task.md.tmpl",
+        "events": [{"id": "page_change", "source": "06_Events/C1_gym/Reply_cancellation_confirmed.md",
+                    "page_updates": [{"path": BEACON_PAGE, "replace": [["Beacon", "Beacon Securities"]]}],
+                    "trigger": {"type": "time", "after_start_hours": 24}}]}
+        if task_id == "pagetest" else real(self, task_id))
+    with pytest.raises(TabError, match="hides a form's line"):
+        environment.init(PERSONA, task_id="pagetest")

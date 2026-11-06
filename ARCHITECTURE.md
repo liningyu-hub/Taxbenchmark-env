@@ -65,7 +65,7 @@ All modules are under `src/tab/` unless a path is given.
 4. **Gate by the task's start date.**
    - An email dated after it goes to `pending/` with its release date.
    - A texts file keeps only the blocks dated up to it; its full text waits in `pending/texts_full/`.
-   - A tax form with `available_from` later than the start waits in `pending/`. Its text is cached now, so reading it later needs no PDF work.
+   - A tax form with `available_from` later than the start waits in `pending/`. Its text is cached now, so reading it later needs no PDF work. Its `page_line` (the site page's "your form is available" line) is taken off the page, and the full page waits in `pending/` to be released with the form.
 5. Copy each tax form PDF to where the persona's world shows it: a portal page, or `Email/attachments/<email>/` for a form sent by email. Check that the PDF names the right payer, then cache its text.
 6. Create the agent's work folder.
 7. Leak scan: refuse to finish if any reviewer marker or framing survives, or any file name contains phishing, trap, TaxBench, answer, expert or guide.
@@ -81,6 +81,7 @@ The build is deterministic: the same sources and task always give the same finge
 | `now` | The simulated clock (`YYYY-MM-DDTHH:MM`), starting at the task's start |
 | `pending` | Withheld items: path, kind (`file` or `texts`), release date, source in `pending/` |
 | `released` | Paths the environment wrote after init, with their SHA-256. Integrity expects the manifest plus these, so deliveries don't count as tampering. |
+| `messages` | What the person wrote to the agent (`{at, text}`), from message events (the daily instruction); `tab task` lists them |
 | `fired`, `fired_at` | Events that happened, with when, which email, and how many emails the agent had sent by then. Graders use the count to tell "before" from "after". |
 | `scheduled` | Events triggered with a delay, and when they arrive |
 | `approvals` | Each request: time, the submission it approves, grants (`file`, `pay`), the agent's text |
@@ -124,7 +125,7 @@ Event and check vocabulary, the generic part:
   - `time`: `after_start_hours`
   - `email_sent`: `to`, and optionally `attaches` / `not_attaches` (a workspace document matched by content) or `attachment` / `no_attachment` path patterns
   - `action`: an agent command (`tool`) and an `args` pattern
-- **Event fields:** `delay_hours`; `page_updates` (`[{"path", "replace": [[old, new], ...]}]`: a site page that changes when the event is delivered, each old text occurring once, checked at init; recorded like an arrival, so integrity expects the new page); `cancels_portal` (`[{"site", "action", "fields"}]`: the site cancels the agent's matching records then, such as bookings at a campground that closes); `unless_fired` / `requires_fired` order the branches. An event scheduled, or coming due in the same command, counts for `unless_fired`. Events due in one command are delivered in time order.
+- **Event fields:** `message` (instead of `source`: the person writes to the agent, announced by the command during which it arrives and kept in `tab task`); `delay_hours`; `page_updates` (`[{"path", "replace": [[old, new], ...]}]`: a site page that changes when the event is delivered, each old text occurring once, checked at init; recorded like an arrival, so integrity expects the new page); `cancels_portal` (`[{"site", "action", "fields"}]`: the site cancels the agent's matching records then, such as bookings at a campground that closes); `unless_fired` / `requires_fired` order the branches. An event scheduled, or coming due in the same command, counts for `unless_fired`. Events due in one command are delivered in time order.
 - **Check types:** `email_sent`, `no_payment_to`, `event_fired`, `email_after_event`, `no_email_before_event`, `no_text_before_event`, `reply` (patterns, and values read from the answer key by line id, so no answer is written in a config), `has_copies`, `folder_only`, `folder_text_mentions`, `portal_action` (fields, date limits, `only`, `latest_for`, `after_event`), `no_portal_action` (with `attempts`, refused attempts count too, and `after_event`, only uses after that event was delivered, both read from the action log), `no_portal_action_before_email` (no done site action before the first email matching an `email` spec), `no_email_to`, `asked_before` (an approval with a grant came before the first attempt; an email entry can require `contains_generated`, so a question to the same address isn't an attempt), `any_of`, `all_of`, `calendar` (present, absent, or at most N entries matching date, end, time and title; `undated` for recurring entries, `except_includes` for one that skips a date), `text_sent`. An email spec can require `contains_generated`: `[site, action, name]`, the value that action generated (a PIN), digits possibly separated. Options: `before_deadline`, `latest` and `before_action` (only what was in place when the site's first standing action of that name was done, such as a form as submitted) for portal actions; `after_portal` for emails and texts (after the first such action that still stands, ordered by the action log, since two actions can share a simulated minute); `after_event` for texts; `on` (a date) and `noise` (patterns that may only come after every required one) for replies.
 - **Approvals:** from `tab request-approval` (the task's policy grants), or from a `tab ask` answer whose simulated-user fact carries `grants`. In non-tax tasks approval needs no return.
 - **Approval policy:** `grants` (e.g. `file`, `pay`), `pay_from`, `reply`; `require_amounts` with `reply_missing_amounts`; `rules`, each `{"when": [patterns], "reply", "grants"}`, where the first rule whose patterns all match the request answers instead. A task without a policy grants nothing: in a tax task the persona says not to file yet, elsewhere that no OK is needed.
@@ -134,7 +135,7 @@ Event and check vocabulary, the generic part:
 Public persona-level blocks:
 - `calendar`: the workspace path of the calendar file; `text_contacts`: who `tab text` can reach
 - `portals`: site → name and actions (`label`, `description`, `fields` with types `choice`/`multi`/`date`/`amount`/`text` (a choice that is a date can name when it `starts`; once that has passed it can't be chosen), `rules` (a rule with `from` applies only once the clock reaches that time), `once`, `requires`, `cancels`, `deadline`, `generates` (`{"pin": "digits:6"}`: a value made for each record, shown as `{pin}`), `message`, `receipt`). This is exactly what `tab portal` shows the agent, and holds nothing about grading
-- `accounts`: id → name, routing, number
+- `accounts`: id → name, routing, number, and `activity_page`: the bank site page that `tab pay` adds a row to (created by the first payment); every payment also sends a confirmation email
 - `payees`: id → name, aliases, `requires_approval`, `return`
 - `filing`: return id → name, form, balance-due line, payee
 
@@ -154,7 +155,7 @@ Public persona-level blocks:
 ## Adding a persona or a task
 
 1. **Persona:** create `personas/<id>/persona.json`, using S000007 as the model. It sets:
-   - the folder mapping and the tax-form placement table (`doc`, `source`, `place`, `expect_text`, and `available_from` for attachments)
+   - the folder mapping and the tax-form placement table (`doc`, `source`, `place`, `expect_text`, `available_from`: the notice email's date, and `page_line`: `{"path", "text"}` of the page line that announces the form)
    - the output spec, accounts, payees and filing mechanics
    - for each task: kind, start and template only
 2. **Task text:** write the task templates. They are plain text with `{{name}}`, `{{tax_year}}`, `{{environment_date}}` (the task's start date), `{{writable_folder}}`, `{{id}}` and `{{output_spec}}`. The last expands, for each form, to a heading and one line per output line; put it at the very end of the file.

@@ -10,6 +10,8 @@ A task lists its events:
                                                                               event is delivered (checked at init)
    "cancels_portal": [{"site": SITE, "action": ACTION, "fields": {...}}]}     the site cancels the agent's matching
                                                                               records then (a closed campground)
+An event with "message": TEXT instead of "source" is the person writing to the agent (the daily instruction): no file
+is written; it is kept in state.json "messages", logged, and announced by the command during which it arrives.
 After every successful agent command the engine fires each event whose trigger matches, once. An event with a delay is
 scheduled and delivered when the clock passes its time. "attaches"/"not_attaches" name a workspace document: an
 attachment counts when its bytes are that document's (so a renamed exact copy counts, and a different file with a
@@ -34,6 +36,7 @@ class Engine:
     def __init__(self, run):
         self.run = run
         self.events = run.task.get("events") or []
+        self.messages = []  # what the person wrote during the last after_command, in order
 
     def after_command(self, tool: str, args: list, detail: dict) -> list:
         """Fires what this command (or the time it let pass) triggered; returns the delivered paths. Everything that
@@ -111,7 +114,18 @@ class Engine:
             return tool == trigger["tool"] and bool(re.search(trigger.get("args", ""), " ".join(args)))
         return False
 
+    def _message(self, event, when: dt.datetime, state) -> None:
+        stamp = when.strftime("%Y-%m-%dT%H:%M")
+        state.data.setdefault("messages", []).append({"at": stamp, "text": event["message"]})
+        self.run.log(actor="environment", tool="message", args=[event["message"]])
+        self.messages.append(event["message"])
+        state["fired"].append(event["id"])
+        state["fired_at"][event["id"]] = {"at": stamp, "path": None, "emails_sent": _emails_sent(self.run)}
+
     def _fire(self, event, when: dt.datetime, state, delivered: list) -> None:
+        if "message" in event:
+            self._message(event, when, state)
+            return
         pages = updated_pages(self.run.workspace, event)  # first: a page that doesn't match changes nothing
         text = read_text(self.run.path("pending", "events", f"{event['id']}.md"))
         text = _DATE_PLACEHOLDER.sub(lambda m: m.group(1) + clock.format_email_date(when.date()), text)
@@ -140,6 +154,11 @@ def render_source(persona, event) -> str:
         from . import TabError
         raise TabError(f"Missing event draft for {event['id']}: {source.as_posix()}")
     return _RELEASE_LINE.sub("", Renderer.clean_markdown(read_text(source)))
+
+
+def _emails_sent(run) -> int:
+    outbox = run.path("outbox.jsonl")
+    return sum(1 for _ in open(outbox, "rb")) if outbox.is_file() else 0
 
 
 def updated_pages(workspace, event) -> list:

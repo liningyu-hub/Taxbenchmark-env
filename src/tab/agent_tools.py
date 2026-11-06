@@ -48,7 +48,13 @@ class AgentTools:
         self.root = os.path.realpath(run.workspace)
 
     def task(self):
-        return self.persona.task_text(self.run.task), {}
+        """The task text, followed by what the person has written since (a daily task's morning instruction)."""
+        text = self.persona.task_text(self.run.task)
+        messages = self.run.state().data.get("messages") or []
+        if messages:
+            lines = [f"- {m['at'].replace('T', ' ')}: {m['text']}" for m in messages]
+            text = text.rstrip("\n") + f"\n\n## Messages from {self.persona.name}\n\n" + "\n".join(lines) + "\n"
+        return text, {}
 
     def status(self):
         ids = self.run.submission_ids()

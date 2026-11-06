@@ -177,11 +177,13 @@ def _dispatch(run, cmd, argv, stdin, logged_args) -> str:
         raise TabError(f"Unknown command {json.dumps(cmd)}. Run: tab help")
     run.log(actor="agent", tool=cmd, args=logged_args, ok=True, detail=detail)
     from .events import Engine
-    arrived = Engine(run).after_command(cmd, logged_args, detail)
-    if arrived:
-        if cmd == "wait":  # the clock's own deliveries were empty, but a reply did arrive
+    engine = Engine(run)
+    arrived = engine.after_command(cmd, logged_args, detail)
+    if arrived or engine.messages:
+        if cmd == "wait":  # the clock's own deliveries were empty, but a reply or a message did arrive
             text = "\n".join(l for l in text.split("\n") if l != "Nothing new arrived.")
-        text = text.rstrip("\n") + "\n" + "\n".join(f"New email: {p}" for p in arrived)
+        notes = [f"New email: {p}" for p in arrived] + [f'{run.persona.name} writes: "{m}"' for m in engine.messages]
+        text = text.rstrip("\n") + "\n" + "\n".join(notes)
     return text
 
 

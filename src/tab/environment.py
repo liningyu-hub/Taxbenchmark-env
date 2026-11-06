@@ -50,7 +50,13 @@ def init(persona_id, force: bool = False, task_id=None) -> Run:
             folder = staging / "pending" / "events"
             folder.mkdir(parents=True)
             for event in task["events"]:
+                if "source" not in event:
+                    continue  # a message from the person: no draft to render
                 write_text(folder / f"{event['id']}.md", render_source(persona, event))
+                for update in event.get("page_updates") or []:  # a hidden form line's release would undo it
+                    if update["path"] in renderer.hidden_pages:
+                        raise TabError(f"Event {event['id']} changes {update['path']}, which hides a form's line "
+                                       f"until {renderer.hidden_pages[update['path']]}")
                 updated_pages(staging / "workspace", event)  # a page an event will change must match the drafts
             leaks = Renderer.leak_scan(folder)
             if leaks:

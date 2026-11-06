@@ -200,3 +200,23 @@ def test_an_action_can_generate_a_value(home, monkeypatch):
     seed = f"{run.run_id}|{SITE}|get-code|{record['id']}".encode("utf-8")
     expected = f"{int(hashlib.sha256(seed).hexdigest(), 16) % 10 ** 6:06d}"
     assert status == 0 and record["generated"] == {"pin": expected} and f"Your code is {expected}." in out
+
+
+def test_a_time_event_can_carry_a_message_from_the_person(home, monkeypatch):
+    """An event with "message" (no draft file) is the person writing to the agent: announced when it arrives, in
+    order, and kept in `tab task`. Build Guide 2.4: the daily instruction, repeated each morning."""
+    real = Persona.task
+    monkeypatch.setattr(Persona, "task", lambda self, task_id=None: {
+        "id": "portaltest", "kind": "consumer", "start": "2026-03-10T09:00", "template": "task.md.tmpl",
+        "events": [{"id": "m1", "message": "One", "trigger": {"type": "time", "after_start_hours": 24}},
+                   {"id": "m2", "message": "Two", "trigger": {"type": "time", "after_start_hours": 48}}]}
+        if task_id == "portaltest" else real(self, task_id))
+    run = environment.init(PERSONA, task_id="portaltest")
+    emails = sorted(p.name for p in (run.workspace / "Email").iterdir())
+    out = agent("wait", "--days", "2")[1]
+    name = Persona.load(PERSONA).name
+    assert f'{name} writes: "One"' in out and f'{name} writes: "Two"' in out
+    assert out.index('writes: "One"') < out.index('writes: "Two"') and "Nothing new arrived" not in out
+    task = agent("task")[1]
+    assert f"## Messages from {name}" in task and ": One" in task and ": Two" in task
+    assert sorted(p.name for p in (run.workspace / "Email").iterdir()) == emails

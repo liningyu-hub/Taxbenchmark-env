@@ -50,6 +50,7 @@ class Renderer:
         self.today = today
         self.pending_dir = Path(pending_dir) if pending_dir else None
         self.pending = []
+        self.hidden_pages = {}  # page path -> the date its hidden form line comes back (one per page)
         self._used = set()
 
     def build(self) -> dict:
@@ -168,6 +169,28 @@ class Renderer:
             write_text(self.pending_dir / source, text)
             self.pending += [{"path": path, "kind": "texts", "release": d.isoformat(), "source": source} for d in later]
 
+    def _hide_line(self, doc: dict, available: str) -> None:
+        """A withheld form's "page_line" (the site page's "your form is available" line) is taken off the page until
+        the form's date; the full page waits in the pending store and is released with the form."""
+        line = doc["page_line"]
+        if line["path"] in self.hidden_pages:  # the page comes back whole from one snapshot: one hidden line per page
+            raise TabError(f"{doc['doc']}: {line['path']} already hides another form's line (until "
+                           f"{self.hidden_pages[line['path']]}); a page can hide one")
+        page = self.workspace / line["path"]
+        text = read_text(page) if page.is_file() else ""
+        if text.count(line["text"]) != 1:
+            raise TabError(f"{doc['doc']}: the line {line['text']!r} must occur once on {line['path']}")
+        source = f"pages_full/{line['path']}"
+        (self.pending_dir / source).parent.mkdir(parents=True, exist_ok=True)
+        write_text(self.pending_dir / source, text)
+        start = text.index(line["text"])
+        end = start + len(line["text"])
+        if text[end:end + 1] == "\n":
+            end += 1
+        write_text(page, text[:start] + text[end:])
+        self.pending.append({"path": line["path"], "kind": "file", "release": available, "source": source})
+        self.hidden_pages[line["path"]] = available
+
     def _place(self, doc: dict) -> dict:
         """Copies a tax form where the persona's world shows it. A form with "available_from" later than today (an
         email attachment that hasn't arrived) waits in the pending store until that date."""
@@ -179,6 +202,8 @@ class Renderer:
         withhold = bool(self.today and available and dt.date.fromisoformat(available) > self.today)
         if withhold:
             self.pending.append({"path": doc["place"], "kind": "file", "release": available, "source": doc["place"]})
+            if doc.get("page_line"):
+                self._hide_line(doc, available)
         dest = (self.pending_dir if withhold else self.workspace) / doc["place"]
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, dest)

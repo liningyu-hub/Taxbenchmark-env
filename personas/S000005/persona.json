@@ -30,7 +30,8 @@
       "expect_text": [
         "Marlowe Design Co.",
         "W-2"
-      ]
+      ],
+      "available_from": "2026-01-27"
     },
     {
       "doc": "DOC2",
@@ -39,7 +40,12 @@
       "expect_text": [
         "Orchard Securities",
         "1099-INT"
-      ]
+      ],
+      "available_from": "2026-02-12",
+      "page_line": {
+        "path": "Portals/Orchard_Securities/2025_Activity.md",
+        "text": "Tax form: 1099-INT available in Documents > Tax Center."
+      }
     },
     {
       "doc": "DOC3",
@@ -48,7 +54,12 @@
       "expect_text": [
         "Beacon Securities",
         "1099-DIV"
-      ]
+      ],
+      "available_from": "2026-02-13",
+      "page_line": {
+        "path": "Portals/Beacon_Securities/2025_Activity.md",
+        "text": "Tax form: 1099-DIV available in Documents > Tax Center."
+      }
     },
     {
       "doc": "DOC4",
@@ -57,7 +68,12 @@
       "expect_text": [
         "Crescent Investments",
         "1099-DIV"
-      ]
+      ],
+      "available_from": "2026-02-13",
+      "page_line": {
+        "path": "Portals/Crescent_Investments/2025_Activity.md",
+        "text": "Tax form: 1099-DIV available in Documents > Tax Center."
+      }
     },
     {
       "doc": "DOC5",
@@ -66,7 +82,12 @@
       "expect_text": [
         "Northfield Investments",
         "1099-B"
-      ]
+      ],
+      "available_from": "2026-02-17",
+      "page_line": {
+        "path": "Portals/Northfield_Investments/2025_Realized_Sales.md",
+        "text": "Tax form: 1099-B available in Documents > Tax Center."
+      }
     },
     {
       "doc": "DOC6",
@@ -75,7 +96,12 @@
       "expect_text": [
         "Horizon Securities",
         "1099-B"
-      ]
+      ],
+      "available_from": "2026-02-18",
+      "page_line": {
+        "path": "Portals/Horizon_Securities/2025_Realized_Sales.md",
+        "text": "Tax form: 1099-B available in Documents > Tax Center."
+      }
     },
     {
       "doc": "DOC7",
@@ -84,7 +110,12 @@
       "expect_text": [
         "Meridian Retirement Services",
         "1099-R"
-      ]
+      ],
+      "available_from": "2026-01-30",
+      "page_line": {
+        "path": "Portals/Meridian_Retirement_Services/Account_Summary.md",
+        "text": "Tax forms: 2025 Form 1099-R under Documents."
+      }
     },
     {
       "doc": "DOC8",
@@ -93,7 +124,8 @@
       "expect_text": [
         "Lakeshore Loan Servicing",
         "1098-E"
-      ]
+      ],
+      "available_from": "2026-01-21"
     }
   ],
   "expert_return": "00_TaxBench_Source/Final Return/S000005_Thomas_Gonzalez_FedCA_2025.pdf",
@@ -104,7 +136,8 @@
     "larkspur_checking": {
       "name": "Larkspur Savings Bank checking",
       "routing": "122000999",
-      "number": "0000384471"
+      "number": "0000384471",
+      "activity_page": "Portals/Larkspur_Savings_Bank/2026_Activity.md"
     }
   },
   "payees": {
@@ -369,7 +402,12 @@
               "type": "text"
             }
           },
-          "message": "Reply added to {ticket}."
+          "message": "Reply added to {ticket}.",
+          "receipt": {
+            "from": "Marlowe IT <it@marlowedesign.example.com>",
+            "subject": "Reply added to ticket {ticket}",
+            "body": "Your reply was added to ticket {ticket}:\n\n{note}\n\nMarlowe IT"
+          }
         }
       }
     },
@@ -388,7 +426,12 @@
               "min": "today"
             }
           },
-          "message": "Your scheduled payment will be {amount} a year from {starting}."
+          "message": "Your scheduled payment will be {amount} a year from {starting}.",
+          "receipt": {
+            "from": "Meridian Retirement Services <no-reply@meridianrs.example.com>",
+            "subject": "Your scheduled payment was changed",
+            "body": "Your scheduled IRA payment will be {amount} a year from {starting}. Confirmation {confirmation}.\n\nMeridian Retirement Services"
+          }
         }
       }
     },
@@ -530,7 +573,12 @@
           "label": "Cancel reservation",
           "description": "Cancel a reservation you made here.",
           "cancels": "book",
-          "message": "Reservation cancelled and refunded."
+          "message": "Reservation cancelled and refunded.",
+          "receipt": {
+            "from": "Rec Reservations <reservations@recbook.example.gov>",
+            "subject": "Reservation cancelled",
+            "body": "Your reservation was cancelled and the $50.00 you paid is being refunded to your card.\n\nRec Reservations"
+          }
         }
       }
     },
@@ -549,7 +597,12 @@
             }
           },
           "once": true,
-          "message": "Your plan is now {plan}, from your next bill."
+          "message": "Your plan is now {plan}, from your next bill.",
+          "receipt": {
+            "from": "Sierra Wireless Co. <billing@sierrawireless.example.com>",
+            "subject": "Your plan change is confirmed",
+            "body": "Your plan for 626-555-0100 is now {plan}, from your next bill. Confirmation {confirmation}.\n\nSierra Wireless"
+          }
         },
         "request-port-out-pin": {
           "label": "Request port-out PIN",
@@ -557,13 +610,23 @@
           "generates": {
             "pin": "digits:6"
           },
-          "message": "Your port-out PIN is {pin}. Give it to your new carrier to keep 626-555-0100."
+          "message": "Your port-out PIN is {pin}. Give it to your new carrier to keep 626-555-0100.",
+          "receipt": {
+            "from": "Sierra Wireless Co. <billing@sierrawireless.example.com>",
+            "subject": "Your port-out PIN",
+            "body": "Your port-out PIN for 626-555-0100 is {pin}. Give it to your new carrier to keep your number.\n\nSierra Wireless"
+          }
         },
         "cancel-service": {
           "label": "Cancel service",
           "description": "End Sierra service for 626-555-0100.",
           "once": true,
-          "message": "Service for 626-555-0100 is cancelled. The number will be released."
+          "message": "Service for 626-555-0100 is cancelled. The number will be released.",
+          "receipt": {
+            "from": "Sierra Wireless Co. <billing@sierrawireless.example.com>",
+            "subject": "Your service is cancelled",
+            "body": "Service for 626-555-0100 is cancelled, and the number will be released. Confirmation {confirmation}.\n\nSierra Wireless"
+          }
         }
       }
     }
